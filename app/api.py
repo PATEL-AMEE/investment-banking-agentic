@@ -15,10 +15,13 @@ from app.services.neo4j_store import Neo4jStore
 import os
 from fastapi import Depends, Header
 from app.services.azure_ad import user_has_role
-from app.services.ingestion import ingest_document, seed_demo_data
+from app.services.ingestion import seed_demo_data
 from app.services.workflow import run_inspection_workflow
 from app.services.onboarding import run_onboarding_workflow
 from app.services.audit import audit_log
+from app.agents.document_analysis import run_document_analysis
+from app.agents.client_profiling import run_client_profiling
+from app.agents.copilot import run_copilot
 
 app = FastAPI(title="Investment Banking Agentic AI Platform")
 BASE_DIR = Path(__file__).resolve().parent
@@ -230,37 +233,22 @@ def upload_document(file: UploadFile = File(...), metadata: Optional[str] = Form
         except json.JSONDecodeError:
             metadata_obj = {"raw": metadata}
 
-    result = ingest_document(str(upload_path), metadata=metadata_obj, store=store)
+    result = run_document_analysis(str(upload_path), metadata=metadata_obj, store=store)
     return UploadResponse(**result)
-
-
-def _retrieve_policy_citations(query: str) -> list[Dict[str, Any]]:
-    """Keyword retrieval over Policy/Regulation nodes for copilot citations."""
-    fallback = [{"source_id": "POL-AML-01", "excerpt": "Enhanced customer due diligence is required for high-risk profiles."}]
-    nodes = getattr(store, "nodes", None)
-    if not nodes:
-        return fallback
-    terms = [term for term in query.lower().split() if len(term) > 3]
-    citations: list[Dict[str, Any]] = []
-    for node in nodes.values():
-        source_id = node.get("policy_id") or node.get("regulation_id")
-        if not source_id:
-            continue
-        text = ((node.get("summary") or "") + " " + (node.get("title") or "")).lower()
-        if terms and any(term in text for term in terms):
-            citations.append({"source_id": source_id, "excerpt": node.get("summary") or node.get("title") or ""})
-        if len(citations) >= 3:
-            break
-    return citations or fallback
 
 
 @app.post("/api/copilot/query")
 def copilot_query(payload: Dict[str, Any], current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
-    query = payload.get("query", "")
-    return {
-        "answer": f"Policy guidance for: {query}",
-        "citations": _retrieve_policy_citations(query),
-    }
+    return run_copilot(payload.get("query", ""), store)
+
+
+@app.get("/api/agents/profile/{client_id}")
+def client_profile(client_id: str, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """360° client profile assembled by the client-profiling agent."""
+    try:
+        return run_client_profiling(client_id, store)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @app.get("/api/reviews/pending", response_model=list[ReviewTask])

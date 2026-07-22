@@ -5,3 +5,4 @@ python-multipart==0.0.20
 neo4j==5.11.0
 python-jose==3.3.0
 requests==2.31.0
+langgraph==1.2.9
