@@ -19,6 +19,7 @@ from app.services.ingestion import seed_demo_data
 from app.services.workflow import run_inspection_workflow
 from app.services.onboarding import run_onboarding_workflow
 from app.services.audit import audit_log
+from app.services.local_auth import auth_required, issue_token, validate_local_token
 from app.agents.document_analysis import run_document_analysis
 from app.agents.client_profiling import run_client_profiling
 from app.agents.copilot import run_copilot
@@ -66,25 +67,59 @@ azure_ad_settings = get_azure_ad_settings()
 
 
 def get_current_user(authorization: str | None = Header(default=None)) -> dict:
-    if not azure_ad_settings.get("enable_azure_ad"):
-        return {"sub": "local-user", "name": "local-user"}
-    try:
-        return get_current_user_from_header(authorization)
-    except Exception as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
+    """Resolve the caller's identity.
+
+    Azure AD (prod) > local JWT (dev RBAC) > anonymous dev fallback.
+    Set REQUIRE_AUTH=true to reject anonymous access entirely.
+    """
+    if azure_ad_settings.get("enable_azure_ad"):
+        try:
+            return get_current_user_from_header(authorization)
+        except Exception as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+    if authorization:
+        parts = authorization.split()
+        if len(parts) != 2 or parts[0].lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid Authorization header format")
+        try:
+            return validate_local_token(parts[1])
+        except ValueError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+    if auth_required():
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return {"sub": "local-user", "name": "local-user", "roles": []}
 
 
 def require_reviewer_role(current_user: dict = Depends(get_current_user)) -> dict:
-    """Dependency to require reviewer role when Azure AD is enabled.
+    """Require the reviewer role.
 
-    In dev mode (Azure AD disabled) this is a no-op and allows access.
+    Enforced whenever the caller presents claims (Azure AD or local JWT) or
+    REQUIRE_AUTH is on; the no-op path only remains for anonymous dev access.
     """
-    if not azure_ad_settings.get("enable_azure_ad"):
+    anonymous_dev = (
+        not azure_ad_settings.get("enable_azure_ad")
+        and not auth_required()
+        and current_user.get("sub") == "local-user"
+    )
+    if anonymous_dev:
         return current_user
-    # current_user is JWT claims dict when AD is enabled
     if user_has_role(current_user, "reviewer") or user_has_role(current_user, "Compliance.Reviewer"):
         return current_user
     raise HTTPException(status_code=403, detail="insufficient role: reviewer required")
+
+
+class TokenRequest(BaseModel):
+    username: str
+    roles: list[str] = []
+
+
+@app.post("/api/auth/token")
+def issue_dev_token(payload: TokenRequest) -> Dict[str, Any]:
+    """Issue a local development JWT (disabled when Azure AD is enabled)."""
+    if azure_ad_settings.get("enable_azure_ad"):
+        raise HTTPException(status_code=400, detail="Local tokens are disabled; use Azure AD")
+    token = issue_token(payload.username, payload.roles)
+    return {"access_token": token, "token_type": "bearer", "roles": payload.roles}
 
 
 class InspectRequest(BaseModel):
@@ -365,6 +400,12 @@ def overview_page() -> FileResponse:
 def get_audit_logs(request_id: Optional[str] = None, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     events = audit_log.list(request_id)
     return {"request_id": request_id, "count": len(events), "audit_events": events}
+
+
+@app.get("/api/audit/verify")
+def verify_audit_chain(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """Verify the SHA-256 hash chain over the append-only audit trail."""
+    return audit_log.verify_chain()
 
 
 @app.get("/api/reviews/dashboard")

@@ -1,0 +1,84 @@
+"""Data-loss prevention: PII masking and prompt guardrails.
+
+Conservative by design — patterns are chosen to avoid mangling business text
+(amounts, client ids). Applied before text is indexed for retrieval, before
+copilot queries reach generation, and before audit metadata is persisted.
+"""
+from __future__ import annotations
+
+import re
+from typing import Any, Dict, List, Tuple
+
+# --------------------------------------------------------------------- PII
+_PII_PATTERNS: List[Tuple[str, re.Pattern[str]]] = [
+    ("EMAIL", re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b")),
+    # International (+44...) or separator-formatted phone numbers only —
+    # a bare digit run like "500000" is an amount, not a phone number.
+    ("PHONE", re.compile(r"(?:\+\d{1,3}[\s-]?)\d(?:[\s-]?\d){6,12}\b|\b\d{3}[\s-]\d{3}[\s-]\d{4}\b")),
+    ("IBAN", re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b")),
+    ("CARD", re.compile(r"\b(?:\d[ -]?){13,19}\b")),
+    ("UK_NINO", re.compile(r"\b[A-CEGHJ-PR-TW-Z]{2}\s?\d{2}\s?\d{2}\s?\d{2}\s?[A-D]\b")),
+]
+
+
+def _luhn_valid(number: str) -> bool:
+    digits = [int(d) for d in re.sub(r"\D", "", number)]
+    if not 13 <= len(digits) <= 19:
+        return False
+    checksum = 0
+    for i, digit in enumerate(reversed(digits)):
+        if i % 2 == 1:
+            digit *= 2
+            if digit > 9:
+                digit -= 9
+        checksum += digit
+    return checksum % 10 == 0
+
+
+def mask_pii(text: str) -> Tuple[str, List[str]]:
+    """Replace PII with typed placeholders; return (masked_text, types_found)."""
+    found: List[str] = []
+    masked = text
+    for pii_type, pattern in _PII_PATTERNS:
+        def _replace(match: re.Match[str], pii_type: str = pii_type) -> str:
+            value = match.group(0)
+            # Card numbers must pass Luhn — otherwise it's just a long number.
+            if pii_type == "CARD" and not _luhn_valid(value):
+                return value
+            if pii_type not in found:
+                found.append(pii_type)
+            return f"[{pii_type}]"
+
+        masked = pattern.sub(_replace, masked)
+    return masked, found
+
+
+# --------------------------------------------------------------- guardrails
+_INJECTION_PATTERNS = [
+    re.compile(r"ignore\s+(all\s+|any\s+)?(previous|prior|above|earlier)\s+(instructions|prompts|rules)", re.I),
+    re.compile(r"disregard\s+(your|the|all)\s+(instructions|rules|guidelines|system\s+prompt)", re.I),
+    re.compile(r"(reveal|show|print|repeat)\s+(your|the)\s+(system\s+)?prompt", re.I),
+    re.compile(r"you\s+are\s+now\s+(a|an|in)\b", re.I),
+    re.compile(r"(jailbreak|dan\s+mode|developer\s+mode)", re.I),
+    re.compile(r"pretend\s+(you\s+have\s+no|there\s+are\s+no)\s+(rules|restrictions|guidelines)", re.I),
+]
+
+
+def guard_prompt(query: str) -> Dict[str, Any]:
+    """Screen a user query before it reaches retrieval/generation.
+
+    Returns ``allowed`` (injection attempts are refused), the PII-``sanitised``
+    query to use downstream, and the ``flags`` explaining any action taken.
+    """
+    flags: List[str] = []
+    for pattern in _INJECTION_PATTERNS:
+        if pattern.search(query):
+            flags.append("prompt_injection")
+            break
+    sanitised, pii_types = mask_pii(query)
+    flags.extend(f"pii_masked:{t}" for t in pii_types)
+    return {
+        "allowed": "prompt_injection" not in flags,
+        "sanitised": sanitised,
+        "flags": flags,
+    }

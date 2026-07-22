@@ -4,3 +4,4 @@ __pycache__/
 uploads/
 .env
 data/sanctions/
+data/audit/

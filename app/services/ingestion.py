@@ -70,8 +70,12 @@ def ingest_document(file_path: str, metadata: Dict[str, Any] | None = None, stor
     client_id = meta.get("client_id")
 
     # Real pipeline steps: text extraction + chunking for retrieval.
+    # PII is masked before chunks ever reach the search index (DLP).
+    from app.services.dlp import mask_pii
+
     text = extract_text(path)
-    chunks = chunk_text(text)
+    masked_text, pii_found = mask_pii(text)
+    chunks = chunk_text(masked_text)
 
     document = {
         "doc_id": doc_id,
@@ -79,6 +83,7 @@ def ingest_document(file_path: str, metadata: Dict[str, Any] | None = None, stor
         "sha256": digest,
         "metadata": meta,
         "chunk_count": len(chunks),
+        "pii_masked": pii_found,
     }
 
     if store is not None:
