@@ -100,5 +100,8 @@ def get_copilot_agent():
 
 
 def run_copilot(query: str, store: Any) -> Dict[str, Any]:
-    final_state = get_copilot_agent().invoke({"query": query, "store": store})
+    from app.services.telemetry import span
+
+    with span("agent.copilot"):
+        final_state = get_copilot_agent().invoke({"query": query, "store": store})
     return final_state["result"]

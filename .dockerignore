@@ -1,0 +1,23 @@
+# Never bake secrets or local state into images
+.env
+data/audit/
+uploads/
+
+# Local environments and caches
+.venv/
+__pycache__/
+**/__pycache__/
+.pytest_cache/
+*.pyc
+
+# VCS and editor
+.git/
+.gitignore
+.claude/
+
+# Large local-only data (fetched at runtime via scripts/update_sanctions.py)
+data/sanctions/
+
+# Docs not needed inside the image
+*.md
+docs/

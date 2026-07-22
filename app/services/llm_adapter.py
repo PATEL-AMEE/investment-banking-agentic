@@ -15,6 +15,7 @@ response so compliance workflows keep functioning when the LLM is down.
 from __future__ import annotations
 
 import os
+import time
 from typing import Any, Dict, List
 
 import requests
@@ -58,9 +59,23 @@ class LLMAdapter:
         else:
             raise RuntimeError("No LLM provider configured")
 
-        response = requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT_SECONDS)
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"].strip()
+        from app.services.telemetry import llm_usage, span
+
+        model_name = self.azure_deployment if provider == "azure" else self.model
+        with span("llm.chat", provider=provider, model=model_name) as current:
+            started = time.perf_counter()
+            response = requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT_SECONDS)
+            response.raise_for_status()
+            body = response.json()
+            latency_ms = (time.perf_counter() - started) * 1000
+            usage = body.get("usage") or {}
+            prompt_tokens = int(usage.get("prompt_tokens") or 0)
+            completion_tokens = int(usage.get("completion_tokens") or 0)
+            llm_usage.record(model_name, prompt_tokens, completion_tokens, latency_ms)
+            current.set_attribute("llm.prompt_tokens", prompt_tokens)
+            current.set_attribute("llm.completion_tokens", completion_tokens)
+            current.set_attribute("llm.latency_ms", round(latency_ms, 1))
+            return body["choices"][0]["message"]["content"].strip()
 
     # -------------------------------------------------------------- reasoning
     def generate_reasoning(self, prompt: str) -> Dict[str, Any]:

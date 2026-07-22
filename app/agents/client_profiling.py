@@ -108,5 +108,8 @@ def get_profiling_agent():
 
 
 def run_client_profiling(client_id: str, store: Any) -> Dict[str, Any]:
-    final_state = get_profiling_agent().invoke({"client_id": client_id, "store": store})
+    from app.services.telemetry import span
+
+    with span("agent.client_profiling", client_id=client_id):
+        final_state = get_profiling_agent().invoke({"client_id": client_id, "store": store})
     return final_state["result"]

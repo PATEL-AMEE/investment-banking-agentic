@@ -14,6 +14,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.agents.base import default_registry
 from app.services.audit import AuditLog
+from app.services.event_bus import TOPIC_CLIENT_ONBOARDED, TOPIC_REVIEW_ESCALATED, event_bus
 from app.services.sanctions import HIGH_RISK_JURISDICTIONS
 
 # Non-PEP markers that should not count as a politically exposed person.
@@ -163,6 +164,28 @@ def _persist_record(state: OnboardingState) -> Dict[str, Any]:
             },
         )
 
+    # Publish domain events for downstream agents/consumers (Kafka-ready).
+    event_bus.publish(
+        TOPIC_CLIENT_ONBOARDED,
+        {
+            "client_id": state["client_id"],
+            "request_id": state["request_id"],
+            "status": state["final_status"],
+            "risk_score": round(state["risk_score"], 2),
+            "actor": "AGENT_ONBOARDING_001",
+        },
+    )
+    if state["review_task_id"]:
+        event_bus.publish(
+            TOPIC_REVIEW_ESCALATED,
+            {
+                "review_task_id": state["review_task_id"],
+                "client_id": state["client_id"],
+                "source_agent": "AGENT_ONBOARDING_001",
+                "request_id": state["request_id"],
+            },
+        )
+
     return {
         "result": {
             "request_id": state["request_id"],
@@ -225,16 +248,19 @@ def run_onboarding_workflow(
     audit_log: Optional[AuditLog] = None,
 ) -> Dict[str, Any]:
     """Run the KYC/AML onboarding agent (LangGraph StateGraph)."""
-    final_state = get_onboarding_agent().invoke(
-        {
-            "client_id": client_id,
-            "client_name": client_name,
-            "jurisdiction": jurisdiction,
-            "beneficial_owners": beneficial_owners or [],
-            "request_id": request_id,
-            "user_id": user_id,
-            "store": store,
-            "audit_log": audit_log,
-        }
-    )
+    from app.services.telemetry import span
+
+    with span("agent.onboarding", client_id=client_id, request_id=request_id):
+        final_state = get_onboarding_agent().invoke(
+            {
+                "client_id": client_id,
+                "client_name": client_name,
+                "jurisdiction": jurisdiction,
+                "beneficial_owners": beneficial_owners or [],
+                "request_id": request_id,
+                "user_id": user_id,
+                "store": store,
+                "audit_log": audit_log,
+            }
+        )
     return final_state["result"]

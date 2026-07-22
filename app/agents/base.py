@@ -23,12 +23,15 @@ class ToolRegistry:
         return sorted(self._tools)
 
     def call(self, name: str, **kwargs: Any) -> Any:
-        """Invoke a registered tool by name.
+        """Invoke a registered tool by name (traced as ``tool.<name>``).
 
         Raises ``KeyError`` for unknown tools — a misconfigured agent should
         fail loudly, not silently skip a compliance control.
         """
-        return self._tools[name](**kwargs)
+        from app.services.telemetry import span
+
+        with span(f"tool.{name}"):
+            return self._tools[name](**kwargs)
 
 
 def _graph_retriever(store: Any, jurisdiction: str) -> List[Dict[str, Any]]:

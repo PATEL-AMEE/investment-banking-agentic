@@ -13,6 +13,7 @@ from typing import Any, Dict, List, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
+from app.services.event_bus import TOPIC_DOCUMENT_INGESTED, event_bus
 from app.services.ingestion import ingest_document
 
 _DOC_TYPES = {
@@ -71,6 +72,17 @@ def _persist_document(state: DocumentState) -> Dict[str, Any]:
     if state["tags"]:
         metadata.setdefault("tags", state["tags"])
     document = ingest_document(state["file_path"], metadata=metadata, store=state["store"])
+    event_bus.publish(
+        TOPIC_DOCUMENT_INGESTED,
+        {
+            "doc_id": document["doc_id"],
+            "doc_type": state["doc_type"],
+            "tags": state["tags"],
+            "chunk_count": document.get("chunk_count", 0),
+            "client_id": metadata.get("client_id"),
+            "actor": "AGENT_DOCANALYSIS_001",
+        },
+    )
     return {"result": {**document, "doc_type": state["doc_type"], "tags": state["tags"]}}
 
 
@@ -98,7 +110,10 @@ def get_document_agent():
 
 
 def run_document_analysis(file_path: str, metadata: Dict[str, Any] | None = None, store: Any = None) -> Dict[str, Any]:
-    final_state = get_document_agent().invoke(
-        {"file_path": file_path, "metadata": metadata or {}, "store": store}
-    )
+    from app.services.telemetry import span
+
+    with span("agent.document_analysis"):
+        final_state = get_document_agent().invoke(
+            {"file_path": file_path, "metadata": metadata or {}, "store": store}
+        )
     return final_state["result"]

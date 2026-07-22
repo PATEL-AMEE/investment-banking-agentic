@@ -23,6 +23,7 @@ from app.services.ingestion import seed_demo_data
 from app.services.workflow import run_inspection_workflow
 from app.services.onboarding import run_onboarding_workflow
 from app.services.audit import audit_log
+from app.services.event_bus import TOPIC_REVIEW_ESCALATED, TOPIC_REVIEW_RESOLVED, event_bus
 from app.services.local_auth import auth_required, issue_token, validate_local_token
 from app.agents.document_analysis import run_document_analysis
 from app.agents.client_profiling import run_client_profiling
@@ -301,6 +302,14 @@ def resolve_review(review_id: str, payload: ReviewDecision, current_user: dict =
         review = store.resolve_review(review_id, payload.decision, payload.reviewer, payload.notes)
     except Exception as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    event_bus.publish(
+        TOPIC_REVIEW_RESOLVED,
+        {
+            "review_task_id": review["review_id"],
+            "decision": review["decision"],
+            "reviewer": review["reviewer"],
+        },
+    )
     return {
         "review_id": review["review_id"],
         "status": review["status"],
@@ -410,6 +419,50 @@ def get_audit_logs(request_id: Optional[str] = None, current_user: dict = Depend
 def verify_audit_chain(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
     """Verify the SHA-256 hash chain over the append-only audit trail."""
     return audit_log.verify_chain()
+
+
+@app.get("/api/events/recent")
+def recent_events(topic: Optional[str] = None, limit: int = 50, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """Recent domain events published on the agent event bus."""
+    events = event_bus.recent(topic, limit)
+    return {"topic": topic, "count": len(events), "events": events}
+
+
+@app.get("/api/telemetry/spans")
+def telemetry_spans(limit: int = 100, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """Recent OpenTelemetry spans (agent runs, tool calls, LLM requests)."""
+    from app.services.telemetry import recent_spans
+
+    spans = recent_spans(limit)
+    return {"count": len(spans), "spans": spans}
+
+
+@app.get("/api/telemetry/llm")
+def telemetry_llm(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """Aggregate LLM token usage and latency per model."""
+    from app.services.telemetry import llm_usage
+
+    return llm_usage.summary()
+
+
+# --- event subscribers: agents/services reacting to each other's events ---
+def _audit_escalation(event: Dict[str, Any]) -> None:
+    """Record every escalation on the immutable audit trail, regardless of
+    which agent raised it — the audit service reacts to the event, the
+    publishing agent doesn't know or care."""
+    payload = event["payload"]
+    audit_log.record(
+        event_type="review_escalated",
+        actor_id=str(payload.get("source_agent", "unknown")),
+        action="escalate_to_human",
+        result="pending",
+        resource_id=str(payload.get("client_id")),
+        request_id=payload.get("request_id"),
+        metadata={"review_task_id": payload.get("review_task_id")},
+    )
+
+
+event_bus.subscribe(TOPIC_REVIEW_ESCALATED, _audit_escalation)
 
 
 @app.get("/api/reviews/dashboard")

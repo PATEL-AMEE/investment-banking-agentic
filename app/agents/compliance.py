@@ -12,6 +12,7 @@ from typing import Any, Dict, List, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.services.azure_openai_adapter import AzureOpenAIAdapter
+from app.services.event_bus import TOPIC_COMPLIANCE_DECISION, TOPIC_REVIEW_ESCALATED, event_bus
 
 
 class ComplianceState(TypedDict, total=False):
@@ -137,6 +138,30 @@ def _assemble_result(state: ComplianceState) -> Dict[str, Any]:
         rationale = reasoning["summary"]
     else:
         rationale = "Compliance workflow evaluated the client profile, supporting evidence, and policy applicability."
+
+    # Publish the decision (skip dashboard scans — 30+ synthetic runs/page).
+    if state.get("workflow_step") != "dashboard-scan":
+        event_bus.publish(
+            TOPIC_COMPLIANCE_DECISION,
+            {
+                "client_id": state["client_id"],
+                "request_id": state["request_id"],
+                "decision": state["decision"],
+                "confidence": round(state["confidence"], 2),
+                "review_task_id": state["review_task_id"],
+                "actor": "AGENT_COMPLIANCE_001",
+            },
+        )
+        if state["review_task_id"]:
+            event_bus.publish(
+                TOPIC_REVIEW_ESCALATED,
+                {
+                    "review_task_id": state["review_task_id"],
+                    "client_id": state["client_id"],
+                    "source_agent": "AGENT_COMPLIANCE_001",
+                    "request_id": state["request_id"],
+                },
+            )
     return {
         "result": {
             "decision": state["decision"],
@@ -198,16 +223,19 @@ def run_compliance_agent(
     store: Any,
     persist_review: bool = True,
 ) -> Dict[str, Any]:
-    final_state = get_compliance_agent().invoke(
-        {
-            "client_id": client_id,
-            "tx_data": tx_data,
-            "request_id": request_id,
-            "user_id": user_id,
-            "session_id": session_id,
-            "workflow_step": workflow_step,
-            "store": store,
-            "persist_review": persist_review,
-        }
-    )
+    from app.services.telemetry import span
+
+    with span("agent.compliance", client_id=client_id, request_id=request_id, workflow_step=workflow_step):
+        final_state = get_compliance_agent().invoke(
+            {
+                "client_id": client_id,
+                "tx_data": tx_data,
+                "request_id": request_id,
+                "user_id": user_id,
+                "session_id": session_id,
+                "workflow_step": workflow_step,
+                "store": store,
+                "persist_review": persist_review,
+            }
+        )
     return final_state["result"]
