@@ -1,0 +1,59 @@
+evidence_id,doc_id,page,excerpt
+E-1,D-0001,12,Beneficial owner identity confirmed against government registry
+E-2,D-0002,4,Transaction history shows repeated international wires
+E-3,D-0002,12,PEP screening result flagged for secondary review
+E-4,D-0003,12,Beneficial owner is listed as a politically exposed person
+E-5,D-0004,7,Onboarding questionnaire notes elevated jurisdiction risk
+E-6,D-0005,2,Beneficial owner identity confirmed against government registry
+E-7,D-0006,9,Transaction history shows repeated international wires
+E-8,D-0007,4,Corporate registry extract confirms directorship details
+E-9,D-0008,8,Transaction history shows repeated international wires
+E-10,D-0008,5,Onboarding questionnaire notes elevated jurisdiction risk
+E-11,D-0009,3,Enhanced due diligence pack completed for high-risk profile
+E-12,D-0010,5,Source of funds documentation provided and reviewed
+E-13,D-0010,4,PEP screening result flagged for secondary review
+E-14,D-0011,2,Owner address verified via recent utility bill
+E-15,D-0011,2,Sanctions list check returned no adverse matches
+E-16,D-0012,6,Counterparty due diligence report attached to file
+E-17,D-0012,5,Onboarding questionnaire notes elevated jurisdiction risk
+E-18,D-0013,8,Wire transfer approval obtained from secondary reviewer
+E-19,D-0014,2,Sanctions list check returned no adverse matches
+E-20,D-0015,11,Counterparty due diligence report attached to file
+E-21,D-0015,6,Onboarding questionnaire notes elevated jurisdiction risk
+E-22,D-0016,2,Wire transfer approval obtained from secondary reviewer
+E-23,D-0017,4,Beneficial owner is listed as a politically exposed person
+E-24,D-0018,4,Owner address verified via recent utility bill
+E-25,D-0018,2,Counterparty due diligence report attached to file
+E-26,D-0019,8,Beneficial ownership structure updated in latest KYC form
+E-27,D-0019,6,Beneficial owner is listed as a politically exposed person
+E-28,D-0020,6,Source of funds documentation provided and reviewed
+E-29,D-0021,5,Beneficial owner is listed as a politically exposed person
+E-30,D-0022,11,Onboarding questionnaire notes elevated jurisdiction risk
+E-31,D-0023,12,Corporate registry extract confirms directorship details
+E-32,D-0024,8,PEP screening result flagged for secondary review
+E-33,D-0025,3,Beneficial owner identity confirmed against government registry
+E-34,D-0026,7,Transaction history shows repeated international wires
+E-35,D-0026,4,Source of funds documentation provided and reviewed
+E-36,D-0027,10,Beneficial owner is listed as a politically exposed person
+E-37,D-0028,5,Onboarding questionnaire notes elevated jurisdiction risk
+E-38,D-0029,2,Sanctions list check returned no adverse matches
+E-39,D-0029,6,Enhanced due diligence pack completed for high-risk profile
+E-40,D-0030,8,Correspondent banking relationship reviewed and approved
+E-41,D-0031,4,Corporate registry extract confirms directorship details
+E-42,D-0032,9,PEP screening result flagged for secondary review
+E-43,D-0033,3,Owner address verified via recent utility bill
+E-44,D-0033,7,Trade finance documentation screened for AML red flags
+E-45,D-0034,5,Adverse media screening returned no material findings
+E-46,D-0035,11,Counterparty due diligence report attached to file
+E-47,D-0036,6,Wire transfer approval obtained from secondary reviewer
+E-48,D-0037,2,Beneficial ownership structure updated in latest KYC form
+E-49,D-0038,8,Transaction history shows repeated international wires
+E-50,D-0038,4,Source of funds documentation provided and reviewed
+E-51,D-0039,12,Beneficial owner is listed as a politically exposed person
+E-52,D-0040,5,Onboarding questionnaire notes elevated jurisdiction risk
+E-53,D-0041,3,Sanctions list check returned no adverse matches
+E-54,D-0042,7,Enhanced due diligence pack completed for high-risk profile
+E-55,D-0042,9,Whistleblower report logged and handled confidentially
+E-56,D-0043,4,Virtual asset transaction traced to verified wallet
+E-57,D-0044,6,Suspicious transaction report filed with regulator
+E-58,D-0044,2,Owner address verified via recent utility bill

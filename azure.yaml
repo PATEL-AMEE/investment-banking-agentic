@@ -1,0 +1,6 @@
+name: investment-banking-agentic-ai
+services:
+  api:
+    project: .
+    language: py
+    host: containerapp

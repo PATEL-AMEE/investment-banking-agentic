@@ -1,0 +1,15 @@
+regulation_id,title,effective_date,jurisdiction
+REG-001,AML Directive 2023,2023-01-01,GB
+REG-002,KYC Control Standard,2023-06-01,US
+REG-003,Sanctions Screening Regulation,2023-09-01,EU
+REG-004,Market Abuse Regulation,2022-07-03,EU
+REG-005,Anti-Bribery Standard,2023-03-15,GB
+REG-006,Beneficial Ownership Rule,2024-01-10,US
+REG-007,Cross-Border Wire Transfer Rule,2023-11-01,EU
+REG-008,PEP Screening Directive,2024-02-20,EU
+REG-009,Whistleblower Protection Directive,2024-04-01,EU
+REG-010,Data Privacy Compliance Rule,2024-05-15,GB
+REG-011,Correspondent Banking Standard,2024-03-10,US
+REG-012,Trade Finance AML Rule,2024-06-01,EU
+REG-013,Virtual Asset Service Provider Rule,2024-07-01,EU
+REG-014,Suspicious Transaction Reporting Standard,2024-05-20,US

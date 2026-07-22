@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reviewer Dashboard</title>
+    <link rel="stylesheet" href="/reviewer/static/styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Reviewer Dashboard</h1>
+        <div class="token-entry">
+          <label>Auth token (paste JWT for Azure mode):</label>
+          <input id="authToken" placeholder="paste token here" />
+          <button id="saveToken">Use Token</button>
+        </div>
+      </header>
+
+      <main>
+        <section>
+          <h2>Pending Reviews</h2>
+          <div id="pending"></div>
+        </section>
+        <section>
+          <h2>Resolve</h2>
+          <div id="resolver">
+            <p>Select a review to resolve from the list.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/reviewer/static/main.js"></script>
+  </body>
+</html>

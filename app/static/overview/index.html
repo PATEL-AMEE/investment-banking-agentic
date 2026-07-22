@@ -1,0 +1,428 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic AI Platform — Analytics Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:        #f4f6f9;
+    --surface:      #ffffff;
+    --surface-2:    #fafbfc;
+    --ink:          #0e1217;
+    --ink-2:        #51565e;
+    --muted:        #8a8f98;
+    --grid:         #e6e9ee;
+    --hair:         rgba(14,18,23,0.10);
+    --accent:       #2a78d6;
+    --accent-soft:  #eaf2fc;
+    --good:     #0ca30c;
+    --warning:  #d98a00;
+    --serious:  #ec835a;
+    --critical: #d03b3b;
+    --good-bg:  rgba(12,163,12,0.12);
+    --warn-bg:  rgba(217,138,0,0.14);
+    --crit-bg:  rgba(208,59,59,0.12);
+    --c1: #2a78d6; --c2: #eb6834; --c3: #1baf7a; --c4: #eda100; --c5: #e87ba4; --c6: #008300;
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(14,18,23,0.04), 0 4px 16px rgba(14,18,23,0.05);
+    --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Consolas", monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --plane: #0c0e11; --surface: #16191d; --surface-2: #1b1f24;
+      --ink: #f3f5f7; --ink-2: #b3b9c2; --muted: #7e848d;
+      --grid: #262b31; --hair: rgba(255,255,255,0.10);
+      --accent: #3987e5; --accent-soft: #17273b;
+      --good-bg: rgba(12,163,12,0.20); --warn-bg: rgba(217,138,0,0.20); --crit-bg: rgba(208,59,59,0.20);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --plane: #0c0e11; --surface: #16191d; --surface-2: #1b1f24;
+    --ink: #f3f5f7; --ink-2: #b3b9c2; --muted: #7e848d;
+    --grid: #262b31; --hair: rgba(255,255,255,0.10);
+    --accent: #3987e5; --accent-soft: #17273b;
+    --good-bg: rgba(12,163,12,0.20); --warn-bg: rgba(217,138,0,0.20); --crit-bg: rgba(208,59,59,0.20);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--plane); color: var(--ink); font-family: var(--font); line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 22px 64px; }
+  .num { font-variant-numeric: tabular-nums; }
+  header.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+  .title-block h1 { font-size: clamp(22px, 3vw, 30px); font-weight: 680; letter-spacing: -0.02em; margin: 0; text-wrap: balance; }
+  .title-block p { margin: 4px 0 0; color: var(--ink-2); font-size: 14px; }
+  .tag-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .badge { font-size: 11.5px; font-weight: 600; letter-spacing: 0.03em; text-transform: uppercase; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--hair); color: var(--ink-2); background: var(--surface); white-space: nowrap; }
+  .badge.proto { color: var(--warning); background: var(--warn-bg); border-color: transparent; }
+  button.theme { font: inherit; font-size: 13px; cursor: pointer; padding: 7px 12px; border-radius: 999px; border: 1px solid var(--hair); background: var(--surface); color: var(--ink-2); }
+  button.theme:hover { color: var(--ink); }
+  .notice { margin: 18px 0 26px; padding: 12px 16px; border-radius: 10px; background: var(--accent-soft); border: 1px solid var(--hair); color: var(--ink-2); font-size: 13px; }
+  .notice strong { color: var(--ink); }
+  .notice code { font-family: var(--mono); font-size: 12px; }
+  .eyebrow { font-size: 12px; font-weight: 640; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin: 34px 0 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; }
+  .tile { background: var(--surface); border: 1px solid var(--hair); border-radius: var(--radius); padding: 16px 16px 15px; box-shadow: var(--shadow); }
+  .tile .label { font-size: 12px; color: var(--ink-2); font-weight: 560; }
+  .tile .value { font-size: clamp(20px, 2.3vw, 27px); font-weight: 700; letter-spacing: -0.02em; margin-top: 8px; }
+  .tile .sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+  .tile .value.good { color: var(--good); }
+  .cols { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; align-items: start; }
+  .card { background: var(--surface); border: 1px solid var(--hair); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); }
+  .card h3 { margin: 0 0 2px; font-size: 15px; font-weight: 640; letter-spacing: -0.01em; }
+  .card .cap { margin: 0 0 16px; font-size: 12.5px; color: var(--muted); }
+  .stack { display: flex; flex-direction: column; gap: 18px; }
+  .sla { display: flex; flex-direction: column; gap: 12px; }
+  .sla-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+  .sla-row .name { font-size: 13.5px; }
+  .sla-row .name small { display: block; color: var(--muted); font-size: 11.5px; }
+  .pill { font-size: 12px; font-weight: 620; padding: 4px 10px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; }
+  .pill.good { color: var(--good); background: var(--good-bg); }
+  .pill.warn { color: var(--warning); background: var(--warn-bg); }
+  .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+  .chart { display: flex; flex-direction: column; gap: 11px; }
+  .bar-row { display: grid; grid-template-columns: 128px 1fr; align-items: center; gap: 12px; }
+  .bar-row .k { font-size: 12.5px; color: var(--ink-2); }
+  .track { position: relative; height: 26px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
+  .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 6px; min-width: 3px; display: flex; align-items: center; justify-content: flex-end; padding-right: 8px; color: #fff; font-size: 12px; font-weight: 640; }
+  .fill.c1{background:var(--c1)} .fill.c2{background:var(--c2)} .fill.c3{background:var(--c3)}
+  .fill.c4{background:var(--c4)} .fill.c5{background:var(--c5)} .fill.c6{background:var(--c6)}
+  .fill.good{background:var(--good)} .fill.warn{background:var(--warning)} .fill.crit{background:var(--critical)}
+  .fill .lbl-dark { color: #1a1200; }
+  .lat { display: grid; grid-template-columns: 110px 1fr 88px; align-items: center; gap: 12px; }
+  .lat .k { font-size: 12.5px; color: var(--ink-2); }
+  .lat .bars { position: relative; height: 30px; }
+  .lat .target { position: absolute; top: 0; bottom: 0; border-right: 2px dashed var(--muted); }
+  .lat .actual { position: absolute; top: 6px; height: 18px; background: var(--accent); border-radius: 5px; }
+  .lat .v { font-size: 12px; text-align: right; color: var(--ink-2); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--grid); }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; color: var(--ink-2); }
+  .sw { width: 11px; height: 11px; border-radius: 3px; }
+  .agents { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .metric-list { display: flex; flex-direction: column; gap: 9px; margin-top: 4px; }
+  .metric-list .m { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; }
+  .metric-list .m span:first-child { color: var(--ink-2); }
+  .metric-list .m span:last-child { font-weight: 640; }
+  .samples { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .out { display: flex; flex-direction: column; gap: 0; overflow: hidden; padding: 0; }
+  .out-head { padding: 15px 16px; border-bottom: 1px solid var(--grid); }
+  .out-head .kind { font-size: 11.5px; font-weight: 620; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+  .out-head .verdict { display: flex; align-items: center; gap: 9px; margin-top: 7px; }
+  .out-head .verdict b { font-size: 17px; letter-spacing: -0.01em; }
+  .verdict .status-tag { font-size: 11.5px; font-weight: 640; padding: 3px 9px; border-radius: 6px; }
+  .status-tag.good { color: var(--good); background: var(--good-bg); }
+  .status-tag.warn { color: var(--warning); background: var(--warn-bg); }
+  .out-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 12px; }
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 12.5px; }
+  .kv dt { color: var(--ink-2); }
+  .kv dd { margin: 0; text-align: right; font-weight: 600; }
+  .meter { height: 6px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 4px; }
+  .id { font-family: var(--mono); font-size: 11.5px; color: var(--muted); word-break: break-all; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 11px; padding: 3px 8px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--hair); color: var(--ink-2); }
+  .chip.alert { color: var(--critical); background: var(--crit-bg); border-color: transparent; font-weight: 620; }
+  .prov { display: flex; flex-direction: column; gap: 7px; }
+  .prov .p { display: grid; grid-template-columns: 1fr auto; gap: 8px; font-size: 12px; align-items: center; }
+  .prov .p .src { color: var(--ink-2); font-family: var(--mono); font-size: 11.5px; }
+  .prov .p .cf { color: var(--muted); }
+  .cite { font-size: 12px; border-left: 2px solid var(--accent); padding: 2px 0 2px 10px; }
+  .cite b { display: block; font-weight: 620; font-size: 12px; }
+  .cite small { color: var(--muted); }
+  .timeline { position: relative; margin: 4px 0 0; padding-left: 6px; }
+  .ev { position: relative; padding: 0 0 16px 26px; }
+  .ev::before { content: ""; position: absolute; left: 5px; top: 4px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .ev::after { content: ""; position: absolute; left: 9px; top: 14px; bottom: -2px; width: 1.5px; background: var(--grid); }
+  .ev:last-child::after { display: none; }
+  .ev .et { font-weight: 620; font-size: 13px; }
+  .ev.alert::before { background: var(--critical); box-shadow: 0 0 0 3px var(--crit-bg); }
+  .ev .ed { font-size: 12px; color: var(--ink-2); }
+  .ev .ts { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .value-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .vcard { background: var(--surface); border: 1px solid var(--hair); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+  .vcard .big { font-size: clamp(21px, 2.4vw, 26px); font-weight: 720; letter-spacing: -0.02em; }
+  .vcard .big.good { color: var(--good); }
+  .vcard .lab { font-size: 12.5px; color: var(--ink-2); margin-top: 5px; }
+  .vcard .foot { font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+  footer { margin-top: 40px; padding-top: 18px; border-top: 1px solid var(--grid); font-size: 12px; color: var(--muted); }
+  #tip { position: fixed; pointer-events: none; z-index: 50; background: var(--ink); color: var(--surface); font-size: 12px; padding: 6px 9px; border-radius: 7px; opacity: 0; transform: translateY(4px); transition: opacity .12s; max-width: 220px; box-shadow: var(--shadow); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  .live-link { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #fff; background: var(--accent); padding: 9px 15px; border-radius: 10px; text-decoration: none; }
+  .live-link:hover { filter: brightness(1.05); }
+  .live-note { font-size: 12.5px; color: var(--ink-2); margin-top: 10px; }
+  .live-note code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  @media (max-width: 960px) {
+    .kpis { grid-template-columns: repeat(3, 1fr); }
+    .cols { grid-template-columns: 1fr; }
+    .agents, .samples { grid-template-columns: 1fr; }
+    .value-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 560px) {
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .bar-row { grid-template-columns: 96px 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title-block">
+      <h1>Agentic AI Compliance Platform</h1>
+      <p>Operations &amp; outputs overview · Investment Banking · reporting period Jul 2026</p>
+    </div>
+    <div class="tag-row">
+      <span class="badge proto">Prototype</span>
+      <span class="badge">Sample / projected data</span>
+      <button class="theme" id="themeBtn" type="button">◐ Theme</button>
+    </div>
+  </header>
+
+  <div class="notice">
+    <strong>What this is.</strong> A read-only analysis view of the platform's three agents — Compliance, KYC/AML Onboarding, and Copilot.
+    Figures are <strong>illustrative targets from the design spec</strong>, not live production measurements — use it to reason about volumes, SLAs, and the shape of each decision output.
+    For the real numbers from your running app, use the <strong>live snapshot</strong> section at the bottom.
+  </div>
+
+  <div class="eyebrow">This month at a glance</div>
+  <div class="kpis">
+    <div class="tile"><div class="label">Compliance decisions</div><div class="value num">14,400</div><div class="sub">78% auto-approved</div></div>
+    <div class="tile"><div class="label">KYC assessments</div><div class="value num">450</div><div class="sub">65% auto-approved</div></div>
+    <div class="tile"><div class="label">Copilot queries</div><div class="value num">310K</div><div class="sub">450 unique users</div></div>
+    <div class="tile"><div class="label">Audit events</div><div class="value num">1.5M</div><div class="sub">100% coverage</div></div>
+    <div class="tile"><div class="label">Uptime</div><div class="value num good">99.97%</div><div class="sub">target 99.9%</div></div>
+    <div class="tile"><div class="label">Run cost</div><div class="value num">$3,775</div><div class="sub">$0.26 / decision</div></div>
+  </div>
+
+  <div class="eyebrow">Service levels &amp; throughput</div>
+  <div class="cols">
+    <div class="stack">
+      <div class="card">
+        <h3>Decision outcomes — Compliance agent</h3>
+        <p class="cap">14,400 decisions routed this month</p>
+        <div class="chart">
+          <div class="bar-row"><div class="k">Auto-approved</div><div class="track"><div class="fill good" style="width:78%" data-tip="11,232 decisions · 78%">11,232</div></div></div>
+          <div class="bar-row"><div class="k">Escalated</div><div class="track"><div class="fill warn" style="width:18%" data-tip="576 decisions">576</div></div></div>
+          <div class="bar-row"><div class="k">Rejected</div><div class="track"><div class="fill crit" style="width:18%" data-tip="2,592 decisions · 18%">2,592</div></div></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw" style="background:var(--good)"></i>Approved</span>
+          <span><i class="sw" style="background:var(--warning)"></i>Escalated to review</span>
+          <span><i class="sw" style="background:var(--critical)"></i>Rejected</span>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Latency p99 vs. target</h3>
+        <p class="cap">Seconds — dashed line marks the SLA target; bar is measured p99</p>
+        <div class="chart">
+          <div class="lat"><div class="k">Compliance</div><div class="bars"><div class="target" style="left:100%" data-tip="Target 5.0s"></div><div class="actual" style="width:96%" data-tip="p99 4.8s"></div></div><div class="v num">4.8s / 5.0s</div></div>
+          <div class="lat"><div class="k">Onboarding</div><div class="bars"><div class="target" style="left:100%" data-tip="Target 12.0s"></div><div class="actual" style="width:100%" data-tip="p99 12.0s"></div></div><div class="v num">12s / 12s</div></div>
+          <div class="lat"><div class="k">Copilot</div><div class="bars"><div class="target" style="left:100%" data-tip="Target 2.0s"></div><div class="actual" style="width:97.5%" data-tip="p99 1.95s"></div></div><div class="v num">1.95s / 2.0s</div></div>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Monthly run cost</h3>
+        <p class="cap">$3,775 total · vs. ~$15,000 manual equivalent</p>
+        <div class="chart">
+          <div class="bar-row"><div class="k">Azure OpenAI</div><div class="track"><div class="fill c1" style="width:100%" data-tip="$1,875 · 125M tokens">$1,875</div></div></div>
+          <div class="bar-row"><div class="k">K8s compute</div><div class="track"><div class="fill c2" style="width:39%" data-tip="$730">$730</div></div></div>
+          <div class="bar-row"><div class="k">Neo4j</div><div class="track"><div class="fill c3" style="width:28%" data-tip="$520">$520</div></div></div>
+          <div class="bar-row"><div class="k">Azure Search</div><div class="track"><div class="fill c4" style="width:20%" data-tip="$380"><span class="lbl-dark">$380</span></div></div></div>
+          <div class="bar-row"><div class="k">Storage</div><div class="track"><div class="fill c5" style="width:8%" data-tip="$150">$150</div></div></div>
+          <div class="bar-row"><div class="k">Data transfer</div><div class="track"><div class="fill c6" style="width:6%" data-tip="$120">$120</div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>SLA compliance</h3>
+      <p class="cap">All four targets met this period</p>
+      <div class="sla">
+        <div class="sla-row"><div class="name">Uptime<small>target 99.9%</small></div><span class="pill good"><span class="dot"></span>99.97%</span></div>
+        <div class="sla-row"><div class="name">Latency p99<small>target ≤ 5.0s</small></div><span class="pill good"><span class="dot"></span>4.8s</span></div>
+        <div class="sla-row"><div class="name">Throughput<small>target ≥ 1,000/s</small></div><span class="pill good"><span class="dot"></span>1,050/s</span></div>
+        <div class="sla-row"><div class="name">Error rate<small>target &lt; 0.5%</small></div><span class="pill good"><span class="dot"></span>0.20%</span></div>
+        <div class="sla-row"><div class="name">PEP detection accuracy<small>onboarding screen</small></div><span class="pill warn"><span class="dot"></span>98.5% · watch</span></div>
+      </div>
+      <div class="legend" style="border:none;padding-top:16px;margin-top:6px">
+        <span style="color:var(--muted);font-size:11.5px">Pills encode state, not just value — green means the target is met, amber means monitor.</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="eyebrow">Per-agent performance</div>
+  <div class="agents">
+    <div class="card">
+      <h3>Compliance</h3>
+      <p class="cap">Document → policy → rules → decision</p>
+      <div class="metric-list">
+        <div class="m"><span>Accuracy</span><span class="num">96.5%</span></div>
+        <div class="m"><span>Auto-approval</span><span class="num">78%</span></div>
+        <div class="m"><span>Escalation</span><span class="num">22%</span></div>
+        <div class="m"><span>Avg latency</span><span class="num">3.2s</span></div>
+        <div class="m"><span>Error rate</span><span class="num">0.15%</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>KYC / AML onboarding</h3>
+      <p class="cap">Sanctions + PEP → risk → escalation</p>
+      <div class="metric-list">
+        <div class="m"><span>Accuracy</span><span class="num">94.2%</span></div>
+        <div class="m"><span>Auto-approval</span><span class="num">65%</span></div>
+        <div class="m"><span>Pending review</span><span class="num">25%</span></div>
+        <div class="m"><span>PEP detections</span><span class="num">9</span></div>
+        <div class="m"><span>Sanctions matches</span><span class="num">0</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Copilot</h3>
+      <p class="cap">Policy Q&amp;A with grounded citations</p>
+      <div class="metric-list">
+        <div class="m"><span>Satisfaction</span><span class="num">4.6 / 5</span></div>
+        <div class="m"><span>Avg response</span><span class="num">1.5s</span></div>
+        <div class="m"><span>p99 response</span><span class="num">1.95s</span></div>
+        <div class="m"><span>Avg session</span><span class="num">12.5 min</span></div>
+        <div class="m"><span>Queries / user</span><span class="num">689</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="eyebrow">Sample decision outputs — how a single result reads</div>
+  <div class="samples">
+    <div class="card out">
+      <div class="out-head">
+        <div class="kind">Compliance check</div>
+        <div class="verdict"><b>APPROVED</b><span class="status-tag good">low risk</span></div>
+        <div class="id" style="margin-top:8px">DECISION_2024_001_ABC · CLIENT_ABC_CORP_001</div>
+      </div>
+      <div class="out-body">
+        <dl class="kv">
+          <dt>Confidence</dt><dd class="num">0.97</dd>
+          <dt>Risk score</dt><dd class="num">2.1 / 10</dd>
+          <dt>Policies passed</dt><dd class="num">12 / 12</dd>
+          <dt>Rules passed</dt><dd class="num">28 / 28</dd>
+          <dt>Entities verified</dt><dd class="num">15 / 15</dd>
+        </dl>
+        <div class="meter"><i style="width:97%;background:var(--good)"></i></div>
+        <div>
+          <div class="cap" style="margin:0 0 8px">Provenance chain</div>
+          <div class="prov">
+            <div class="p"><span class="src">graph_retriever</span><span class="cf num">0.95</span></div>
+            <div class="p"><span class="src">document_analyzer</span><span class="cf num">0.92</span></div>
+            <div class="p"><span class="src">rule_evaluator</span><span class="cf num">1.00</span></div>
+            <div class="p"><span class="src">llm · gpt-4</span><span class="cf num">0.97</span></div>
+          </div>
+        </div>
+        <div class="chip-row"><span class="chip">auto-approved</span><span class="chip">no human review</span><span class="chip">2,450 ms</span></div>
+      </div>
+    </div>
+
+    <div class="card out">
+      <div class="out-head">
+        <div class="kind">KYC / AML onboarding</div>
+        <div class="verdict"><b>PENDING REVIEW</b><span class="status-tag warn">high risk</span></div>
+        <div class="id" style="margin-top:8px">ONBOARDING_2024_001_XYZ · CLIENT_XYZ_FUND_001</div>
+      </div>
+      <div class="out-body">
+        <dl class="kv">
+          <dt>AML risk score</dt><dd class="num">5.6 / 10</dd>
+          <dt>Sanctions</dt><dd>no match</dd>
+          <dt>PEP screen</dt><dd style="color:var(--critical)">1 alert</dd>
+          <dt>KYC docs</dt><dd class="num">3 / 4</dd>
+        </dl>
+        <div class="meter"><i style="width:56%;background:var(--warning)"></i></div>
+        <div class="chip-row">
+          <span class="chip alert">PEP · Jane Doe (US Congress, 8y)</span>
+          <span class="chip">missing: source of funds</span>
+        </div>
+        <div>
+          <div class="cap" style="margin:0 0 6px">Escalation</div>
+          <div style="font-size:12.5px">Routed to <b>kyc_manager_001</b> · queue <span class="id" style="color:var(--ink-2)">kyc_review_high_priority</span> · SLA due 22 Jul 17:00</div>
+        </div>
+        <div class="chip-row"><span class="chip">enhanced due diligence</span><span class="chip">request SoF docs</span></div>
+      </div>
+    </div>
+
+    <div class="card out">
+      <div class="out-head">
+        <div class="kind">Copilot query</div>
+        <div class="verdict"><b>Answered</b><span class="status-tag good">0.92 conf.</span></div>
+        <div class="id" style="margin-top:8px">"KYC requirements for non-resident corporates in the UK?"</div>
+      </div>
+      <div class="out-body">
+        <div style="font-size:12.5px;color:var(--ink-2)">Grounded in 3 sources · 1.95s · returns the 6 required corporate KYC documents with EDD note.</div>
+        <div>
+          <div class="cap" style="margin:0 0 8px">Citations</div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div class="cite"><b>POLICY_KYC_001 — KYC Requirements (Corporate)</b><small>policy v3.2.1 · relevance 0.98</small></div>
+            <div class="cite"><b>MiFID II — Article 27</b><small>regulation · relevance 0.85</small></div>
+            <div class="cite"><b>Precedent — GHI Corp assessment</b><small>prior decision · relevance 0.79</small></div>
+          </div>
+        </div>
+        <div class="chip-row"><span class="chip">3 follow-ups suggested</span><span class="chip">session logged</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="eyebrow">Audit trail — one onboarding decision, end to end</div>
+  <div class="card">
+    <h3>ONBOARDING_2024_001_XYZ</h3>
+    <p class="cap">Every step is logged immutably (7-year retention) — this is the traceability behind a single "PENDING REVIEW"</p>
+    <div class="timeline">
+      <div class="ev"><div class="et">Onboarding initiated</div><div class="ed">Actor: analyst_john_doe</div><div class="ts">2024-07-20T15:45:00Z</div></div>
+      <div class="ev"><div class="et">Sanctions check completed</div><div class="ed">Result: no match · sources OFAC, EU, HMT</div><div class="ts">2024-07-20T15:45:10Z</div></div>
+      <div class="ev alert"><div class="et">PEP analysis completed</div><div class="ed">PEP found: Jane Doe — beneficial owner</div><div class="ts">2024-07-20T15:45:20Z</div></div>
+      <div class="ev"><div class="et">Risk assessment completed</div><div class="ed">AML risk score: 5.6 → tier high</div><div class="ts">2024-07-20T15:45:25Z</div></div>
+      <div class="ev alert"><div class="et">Escalation triggered</div><div class="ed">Reason: PEP detected · assigned kyc_manager_001</div><div class="ts">2024-07-20T15:45:30Z</div></div>
+    </div>
+  </div>
+
+  <div class="eyebrow">Projected business impact</div>
+  <div class="value-grid">
+    <div class="vcard"><div class="big good num">$1.32M</div><div class="lab">Annual labour savings</div><div class="foot">≈ 13.2 FTE freed across the three workflows</div></div>
+    <div class="vcard"><div class="big num">7 d → 2 h</div><div class="lab">Client onboarding turnaround</div><div class="foot">6× monthly onboarding capacity</div></div>
+    <div class="vcard"><div class="big good num">−95.7%</div><div class="lab">Compliance violations</div><div class="foot">error rate 3.5% → 0.15%</div></div>
+    <div class="vcard"><div class="big num">100%</div><div class="lab">Audit traceability</div><div class="foot">was ~65% · audit time weeks → &lt; 1 min</div></div>
+  </div>
+
+  <div class="eyebrow">Live data from your running app</div>
+  <div class="card">
+    <h3>Real output — 18 demo clients</h3>
+    <p class="cap">The figures above are design targets. Your actual app currently produces: 5 pass / 13 warn decisions across 18 clients, 10 policies, 8 regulations. KYC with a PEP owner → PENDING_REVIEW, risk 4.0/10.</p>
+    <a class="live-link" href="/dashboard">Open the live dashboard →</a>
+    <p class="live-note">Served by this same app — visit <code>http://127.0.0.1:8000/dashboard</code>. That page recomputes on every refresh and lets you run the KYC and copilot agents live.</p>
+  </div>
+
+  <footer>
+    Prototype analytics view of the Investment Banking Agentic AI Platform. The headline figures are illustrative targets drawn from the design specification — <strong>not live production metrics</strong> and not affiliated with any named financial institution. The "Live data" section links to the real, running app. Status colours pair with labels so meaning never rests on colour alone.
+  </footer>
+</div>
+
+<div id="tip" role="status"></div>
+<script>
+  (function () {
+    var root = document.documentElement;
+    document.getElementById('themeBtn').addEventListener('click', function () {
+      var cur = root.getAttribute('data-theme');
+      var next = cur === 'dark' ? 'light' : (cur === 'light' ? 'dark'
+        : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'light' : 'dark'));
+      root.setAttribute('data-theme', next);
+    });
+    var tip = document.getElementById('tip');
+    function show(e, text) {
+      tip.textContent = text; tip.style.opacity = '1';
+      var pad = 14;
+      var x = e.clientX + pad, y = e.clientY + pad;
+      if (x + 230 > window.innerWidth) x = e.clientX - 230;
+      tip.style.left = x + 'px'; tip.style.top = y + 'px';
+    }
+    document.querySelectorAll('[data-tip]').forEach(function (el) {
+      el.addEventListener('mousemove', function (e) { show(e, el.getAttribute('data-tip')); });
+      el.addEventListener('mouseleave', function () { tip.style.opacity = '0'; });
+    });
+  })();
+</script>
+</body>
+</html>

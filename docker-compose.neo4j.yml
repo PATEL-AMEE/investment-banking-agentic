@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  neo4j:
+    image: neo4j:5
+    container_name: neo4j-dev
+    environment:
+      NEO4J_AUTH: "neo4j/test"
+      NEO4J_dbms_memory_pagecache_size: 512M
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    volumes:
+      - ./neo4j/data:/data
+      - ./neo4j/logs:/logs
+      - ./neo4j/import:/var/lib/neo4j/import
+    restart: unless-stopped

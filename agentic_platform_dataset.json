@@ -1,0 +1,1398 @@
+{
+  "platform_config": {
+    "environment": "production",
+    "version": "1.0.0",
+    "region": "northeurope",
+    "timezone": "UTC",
+    "compliance_domains": [
+      "regulatory_compliance",
+      "kyc_aml",
+      "sanctions_screening",
+      "mifid_ii",
+      "gdpr",
+      "uk_fca",
+      "ecb_guidelines"
+    ],
+    "service_endpoints": {
+      "neo4j": "bolt://neo4j.databases.svc.cluster.local:7687",
+      "kafka": "kafka.events.svc.cluster.local:9092",
+      "azure_openai": "https://openai-agentic-prod.openai.azure.com/",
+      "azure_search": "https://search-agentic-prod.search.windows.net/",
+      "key_vault": "https://kv-agentic-prod.vault.azure.net/",
+      "event_hub": "https://eh-agentic-prod.servicebus.windows.net/"
+    },
+    "sla_targets": {
+      "compliance_check_latency_p99_ms": 5000,
+      "copilot_response_latency_p99_ms": 2000,
+      "retrieval_latency_p99_ms": 1000,
+      "throughput_req_per_sec": 1000,
+      "availability_percent": 99.9,
+      "audit_log_latency_ms": 100
+    }
+  },
+  "compliance_policies": {
+    "policies": [
+      {
+        "policy_id": "POLICY_KYC_001",
+        "policy_name": "Know Your Customer (KYC) Requirements - Corporate Clients",
+        "policy_type": "regulatory",
+        "issuer": "FCA",
+        "effective_date": "2023-01-01T00:00:00Z",
+        "version": "3.2.1",
+        "status": "active",
+        "jurisdiction": ["GB", "EU"],
+        "regulatory_domains": ["kyc_aml", "mifid_ii"],
+        "policy_text": "All corporate clients must provide: 1) Articles of Association, 2) Board Resolution, 3) Directors' identification, 4) Beneficial ownership disclosure (>25%), 5) Source of funds documentation, 6) Business purpose statement.",
+        "key_requirements": [
+          {
+            "requirement_id": "KYC_REQ_001",
+            "requirement": "Verify beneficial ownership for all entities >25%",
+            "frequency": "annual",
+            "evidence_type": "beneficial_ownership_registry",
+            "confidence_threshold": 0.95
+          },
+          {
+            "requirement_id": "KYC_REQ_002",
+            "requirement": "Obtain source of funds documentation",
+            "frequency": "on_boarding",
+            "evidence_type": "bank_statement",
+            "confidence_threshold": 0.90
+          },
+          {
+            "requirement_id": "KYC_REQ_003",
+            "requirement": "Perform sanctions screening (OFAC, EU, HMT)",
+            "frequency": "continuous",
+            "evidence_type": "sanctions_check",
+            "confidence_threshold": 1.0
+          }
+        ],
+        "related_regulations": ["REGULATION_MIFID_II_001", "REGULATION_GDPR_001"],
+        "escalation_criteria": {
+          "high_risk_jurisdictions": ["IR", "SY", "KP"],
+          "high_risk_industries": ["weapons", "narcotics", "human_trafficking"],
+          "high_transaction_value_threshold_usd": 10000000,
+          "pep_detected": true,
+          "sanctions_match": true
+        },
+        "approval_chain": [
+          {
+            "level": 1,
+            "role": "kyc_analyst",
+            "max_decision_value_usd": 1000000,
+            "sla_hours": 24
+          },
+          {
+            "level": 2,
+            "role": "kyc_manager",
+            "max_decision_value_usd": 5000000,
+            "sla_hours": 48
+          },
+          {
+            "level": 3,
+            "role": "risk_director",
+            "max_decision_value_usd": null,
+            "sla_hours": 72
+          }
+        ],
+        "audit_trail": {
+          "created_by": "policy_admin_001",
+          "created_at": "2023-01-01T00:00:00Z",
+          "last_modified_by": "policy_admin_001",
+          "last_modified_at": "2024-07-15T10:30:00Z",
+          "change_log": [
+            {
+              "version": "3.2.0",
+              "change": "Reduced beneficial ownership disclosure threshold from 30% to 25%",
+              "reason": "FATF Recommendation update",
+              "effective_date": "2024-07-15T00:00:00Z"
+            }
+          ]
+        }
+      },
+      {
+        "policy_id": "POLICY_SANCTIONS_001",
+        "policy_name": "Sanctions Screening and Enforcement",
+        "policy_type": "regulatory",
+        "issuer": "HMT",
+        "effective_date": "2022-06-01T00:00:00Z",
+        "version": "2.1.0",
+        "status": "active",
+        "jurisdiction": ["GB", "US", "EU"],
+        "regulatory_domains": ["sanctions_screening"],
+        "policy_text": "All clients and beneficial owners must be screened against UK, US OFAC, EU, and UN sanctions lists. Transactions must be blocked if any match is found.",
+        "screening_sources": [
+          {
+            "source_id": "OFAC",
+            "source_name": "US Office of Foreign Assets Control",
+            "refresh_frequency": "daily",
+            "coverage_percentage": 0.98,
+            "lists": ["SDN", "Non-SDN", "Iran", "Cuba"]
+          },
+          {
+            "source_id": "EU_SANCTIONS",
+            "source_name": "European Union Consolidated List",
+            "refresh_frequency": "daily",
+            "coverage_percentage": 0.99,
+            "lists": ["Consolidated_List"]
+          },
+          {
+            "source_id": "HMT",
+            "source_name": "UK HM Treasury Sanctions List",
+            "refresh_frequency": "real_time",
+            "coverage_percentage": 0.99,
+            "lists": ["UK_Consolidated"]
+          }
+        ],
+        "matching_criteria": {
+          "name_similarity_threshold": 0.85,
+          "fuzzy_matching": true,
+          "phonetic_matching": true,
+          "date_of_birth_match_required": false
+        },
+        "escalation_criteria": {
+          "match_score_gt": 0.85,
+          "name_partial_match": true,
+          "transaction_blocking_threshold": 0.95
+        }
+      },
+      {
+        "policy_id": "POLICY_MIFID_SUITABILITY_001",
+        "policy_name": "MiFID II Suitability and Investment Services",
+        "policy_type": "regulatory",
+        "issuer": "FCA",
+        "effective_date": "2023-01-03T00:00:00Z",
+        "version": "2.0.0",
+        "status": "active",
+        "jurisdiction": ["EU", "GB"],
+        "regulatory_domains": ["mifid_ii"],
+        "policy_text": "Investment firms must assess client suitability based on knowledge, experience, financial situation, and investment objectives. Recommendations must be documented and retained.",
+        "suitability_assessment": {
+          "knowledge_levels": ["basic", "intermediate", "advanced"],
+          "experience_categories": ["retail", "professional", "institutional"],
+          "risk_tolerances": ["low", "moderate", "high", "speculative"],
+          "investment_objectives": [
+            "capital_preservation",
+            "income_generation",
+            "moderate_growth",
+            "aggressive_growth",
+            "speculation"
+          ],
+          "product_categorization": [
+            {
+              "product_type": "cash_equivalents",
+              "risk_level": 1,
+              "min_knowledge": "basic",
+              "min_experience": "retail"
+            },
+            {
+              "product_type": "bonds",
+              "risk_level": 2,
+              "min_knowledge": "intermediate",
+              "min_experience": "retail"
+            },
+            {
+              "product_type": "equities",
+              "risk_level": 3,
+              "min_knowledge": "intermediate",
+              "min_experience": "retail"
+            },
+            {
+              "product_type": "derivatives",
+              "risk_level": 5,
+              "min_knowledge": "advanced",
+              "min_experience": "professional"
+            }
+          ]
+        },
+        "documentation_requirements": [
+          "client_questionnaire",
+          "suitability_assessment_form",
+          "recommendation_letter",
+          "acknowledgment_of_risk"
+        ]
+      }
+    ]
+  },
+  "client_kyc_data": {
+    "clients": [
+      {
+        "client_id": "CLIENT_ABC_CORP_001",
+        "client_name": "ABC Investment Corporation",
+        "legal_entity_identifier": "549300ASDF1Z2X3Y4Z5",
+        "client_type": "corporate",
+        "incorporation_date": "2010-03-15T00:00:00Z",
+        "incorporation_jurisdiction": "GB",
+        "registration_number": "12345678",
+        "business_type": "investment_management",
+        "annual_revenue_usd": 250000000,
+        "employee_count": 450,
+        "registered_office": {
+          "street": "123 Canary Wharf",
+          "city": "London",
+          "postal_code": "E14 5AB",
+          "country": "GB"
+        },
+        "business_address": {
+          "street": "123 Canary Wharf",
+          "city": "London",
+          "postal_code": "E14 5AB",
+          "country": "GB"
+        },
+        "website": "www.abcinvestmentcorp.com",
+        "beneficial_owners": [
+          {
+            "owner_id": "OWNER_001",
+            "ownership_percentage": 45.0,
+            "full_name": "John Smith",
+            "date_of_birth": "1965-05-12T00:00:00Z",
+            "nationality": "GB",
+            "passport_number": "GB123456789",
+            "pep_status": "non_pep",
+            "source_of_wealth": "business_operations",
+            "sanctions_checked": true,
+            "sanctions_result": "no_match",
+            "verification_date": "2024-01-15T10:30:00Z"
+          },
+          {
+            "owner_id": "OWNER_002",
+            "ownership_percentage": 35.0,
+            "full_name": "Jane Doe",
+            "date_of_birth": "1970-08-22T00:00:00Z",
+            "nationality": "US",
+            "passport_number": "US987654321",
+            "pep_status": "pep_usa_congress",
+            "source_of_wealth": "inheritance",
+            "sanctions_checked": true,
+            "sanctions_result": "no_match",
+            "verification_date": "2024-01-15T10:30:00Z"
+          },
+          {
+            "owner_id": "OWNER_003",
+            "ownership_percentage": 20.0,
+            "full_name": "ABC Trust Fund Limited",
+            "entity_type": "trust",
+            "country_of_origin": "GB",
+            "ultimate_beneficial_owner": "OWNER_001",
+            "sanctions_checked": true,
+            "sanctions_result": "no_match"
+          }
+        ],
+        "directors": [
+          {
+            "director_id": "DIR_001",
+            "full_name": "Robert Johnson",
+            "date_of_birth": "1960-11-08T00:00:00Z",
+            "nationality": "GB",
+            "passport_number": "GB111111111",
+            "position": "Chief Executive Officer",
+            "appointment_date": "2015-06-01T00:00:00Z"
+          },
+          {
+            "director_id": "DIR_002",
+            "full_name": "Sarah Williams",
+            "date_of_birth": "1972-02-14T00:00:00Z",
+            "nationality": "GB",
+            "passport_number": "GB222222222",
+            "position": "Chief Financial Officer",
+            "appointment_date": "2018-01-15T00:00:00Z"
+          }
+        ],
+        "business_activities": [
+          "fund_management",
+          "investment_advisory",
+          "portfolio_management"
+        ],
+        "regulated_status": "yes",
+        "fca_authorization": {
+          "firm_reference_number": "123456",
+          "status": "active",
+          "authorization_date": "2010-06-01T00:00:00Z",
+          "permissions": ["managing_investments", "arranging_deals"]
+        },
+        "kyc_assessment": {
+          "assessment_id": "KYC_ASSESS_001",
+          "assessment_date": "2024-01-15T10:30:00Z",
+          "risk_score": 3.2,
+          "risk_rating": "low",
+          "risk_factors": [
+            {
+              "factor": "pep_beneficial_owner",
+              "risk_level": "medium",
+              "mitigation": "enhanced_due_diligence"
+            },
+            {
+              "factor": "international_operations",
+              "risk_level": "low",
+              "mitigation": "none_required"
+            }
+          ],
+          "kyc_status": "approved",
+          "approved_by": "kyc_analyst_001",
+          "approved_at": "2024-01-16T14:00:00Z",
+          "valid_until": "2025-01-15T23:59:59Z"
+        },
+        "source_of_funds": {
+          "documentation": [
+            {
+              "document_id": "SOF_DOC_001",
+              "document_type": "bank_statement",
+              "month": "2024-01",
+              "bank_name": "HSBC UK",
+              "amount_gbp": 50000000,
+              "currency": "GBP",
+              "status": "verified"
+            }
+          ],
+          "verified": true,
+          "verified_date": "2024-01-20T09:00:00Z"
+        },
+        "sanctions_screening": {
+          "last_screening_date": "2024-07-20T03:00:00Z",
+          "next_screening_date": "2024-07-21T03:00:00Z",
+          "screening_frequency": "daily",
+          "results": [
+            {
+              "screening_id": "SCREEN_001",
+              "sanctions_list": "OFAC",
+              "result": "no_match",
+              "checked_date": "2024-07-20T03:15:00Z"
+            },
+            {
+              "screening_id": "SCREEN_002",
+              "sanctions_list": "EU_CONSOLIDATED",
+              "result": "no_match",
+              "checked_date": "2024-07-20T03:20:00Z"
+            },
+            {
+              "screening_id": "SCREEN_003",
+              "sanctions_list": "HMT_UK",
+              "result": "no_match",
+              "checked_date": "2024-07-20T03:25:00Z"
+            }
+          ]
+        },
+        "pep_screening": {
+          "last_check_date": "2024-01-15T10:30:00Z",
+          "pep_found": true,
+          "pep_details": [
+            {
+              "name": "Jane Doe",
+              "pep_type": "usa_congress",
+              "position": "US Congress Member (Historical)",
+              "country": "US",
+              "confidence_score": 0.98,
+              "relationship_to_client": "beneficial_owner",
+              "years_since_office": 8
+            }
+          ]
+        },
+        "document_uploads": [
+          {
+            "document_id": "DOC_ARTICLES_001",
+            "document_type": "articles_of_association",
+            "upload_date": "2024-01-10T11:00:00Z",
+            "file_name": "ABC_Articles_2023.pdf",
+            "file_size_mb": 2.3,
+            "file_hash": "sha256_abc123def456",
+            "status": "verified",
+            "verified_by": "analyst_001"
+          },
+          {
+            "document_id": "DOC_BOARD_001",
+            "document_type": "board_resolution",
+            "upload_date": "2024-01-10T11:15:00Z",
+            "file_name": "ABC_Board_Resolution_2024.pdf",
+            "file_size_mb": 1.1,
+            "status": "verified"
+          },
+          {
+            "document_id": "DOC_ID_001",
+            "document_type": "director_identification",
+            "upload_date": "2024-01-10T11:30:00Z",
+            "file_name": "ABC_Director_IDs.zip",
+            "file_size_mb": 5.6,
+            "status": "verified"
+          }
+        ],
+        "onboarding_status": {
+          "current_stage": "completed",
+          "stages": [
+            {
+              "stage": "document_submission",
+              "status": "completed",
+              "completed_date": "2024-01-10T11:30:00Z"
+            },
+            {
+              "stage": "document_verification",
+              "status": "completed",
+              "completed_date": "2024-01-12T15:00:00Z"
+            },
+            {
+              "stage": "kyc_assessment",
+              "status": "completed",
+              "completed_date": "2024-01-16T14:00:00Z"
+            },
+            {
+              "stage": "compliance_sign_off",
+              "status": "completed",
+              "completed_date": "2024-01-18T09:00:00Z"
+            }
+          ]
+        },
+        "account_relationships": [
+          {
+            "account_id": "ACC_001",
+            "account_type": "settlement",
+            "currency": "GBP",
+            "balance_gbp": 125000000,
+            "opened_date": "2015-06-15T00:00:00Z"
+          },
+          {
+            "account_id": "ACC_002",
+            "account_type": "trading",
+            "currency": "USD",
+            "balance_usd": 75000000,
+            "opened_date": "2016-03-01T00:00:00Z"
+          }
+        ],
+        "audit_trail": {
+          "created_by": "onboarding_team",
+          "created_at": "2024-01-09T08:00:00Z",
+          "last_modified_by": "kyc_analyst_001",
+          "last_modified_at": "2024-01-16T14:00:00Z",
+          "version": 12,
+          "changes_count": 18
+        }
+      }
+    ]
+  },
+  "regulations": {
+    "regulations": [
+      {
+        "regulation_id": "REGULATION_MIFID_II_001",
+        "regulation_name": "Markets in Financial Instruments Directive II (MiFID II)",
+        "issuer": "EU",
+        "effective_date": "2018-01-03T00:00:00Z",
+        "jurisdiction": ["EU", "GB"],
+        "key_articles": [
+          {
+            "article_number": 27,
+            "title": "Information to clients",
+            "requirements": [
+              "Provide general information about investment firm",
+              "Provide information about services offered",
+              "Explain risk warnings"
+            ]
+          },
+          {
+            "article_number": 25,
+            "title": "Assessment of suitability and appropriateness",
+            "requirements": [
+              "Obtain information about knowledge and experience",
+              "Obtain information about financial situation",
+              "Assess suitability of investment"
+            ]
+          }
+        ],
+        "compliance_framework": {
+          "record_keeping": {
+            "retention_period_years": 5,
+            "storage_location": "secure_vault",
+            "encryption_required": true
+          },
+          "documentation": {
+            "suitability_assessment": "mandatory",
+            "client_agreement": "mandatory",
+            "risk_disclosure": "mandatory"
+          }
+        },
+        "related_policies": ["POLICY_MIFID_SUITABILITY_001"]
+      },
+      {
+        "regulation_id": "REGULATION_GDPR_001",
+        "regulation_name": "General Data Protection Regulation (GDPR)",
+        "issuer": "EU",
+        "effective_date": "2018-05-25T00:00:00Z",
+        "jurisdiction": ["EU", "GB"],
+        "data_categories": [
+          "personal_data",
+          "sensitive_personal_data",
+          "financial_data",
+          "health_data"
+        ],
+        "key_principles": [
+          "lawfulness_fairness_transparency",
+          "purpose_limitation",
+          "data_minimization",
+          "accuracy",
+          "storage_limitation",
+          "integrity_confidentiality",
+          "accountability"
+        ],
+        "data_subject_rights": [
+          "right_to_access",
+          "right_to_rectification",
+          "right_to_erasure",
+          "right_to_restrict_processing",
+          "right_to_data_portability",
+          "right_to_object"
+        ],
+        "breach_notification": {
+          "notification_deadline_hours": 72,
+          "authority_notification_required": true,
+          "affected_party_notification_required": true
+        },
+        "dpia_required_for": [
+          "large_scale_processing",
+          "systematic_monitoring",
+          "automated_decision_making",
+          "biometric_data_processing"
+        ]
+      },
+      {
+        "regulation_id": "REGULATION_AML_TFTP_001",
+        "regulation_name": "Anti-Money Laundering and Counter Terrorist Financing",
+        "issuer": "UK_FCA",
+        "effective_date": "2020-01-13T00:00:00Z",
+        "jurisdiction": ["GB"],
+        "aml_risk_assessment": {
+          "customer_risk_tiers": [
+            {
+              "tier": "low",
+              "risk_score_max": 3.0,
+              "cdd_level": "simplified_due_diligence",
+              "monitoring_frequency": "annual"
+            },
+            {
+              "tier": "medium",
+              "risk_score_max": 5.0,
+              "cdd_level": "standard_due_diligence",
+              "monitoring_frequency": "quarterly"
+            },
+            {
+              "tier": "high",
+              "risk_score_min": 5.0,
+              "cdd_level": "enhanced_due_diligence",
+              "monitoring_frequency": "continuous"
+            }
+          ]
+        },
+        "suspicious_activity_indicators": [
+          "high_value_transactions",
+          "unusual_geographic_patterns",
+          "cash_intensive_businesses",
+          "beneficial_owner_changes",
+          "jurisdiction_risk_changes"
+        ],
+        "reporting_obligations": {
+          "sar_report_threshold": "any_suspicion",
+          "sar_filing_deadline_days": 7,
+          "reporting_authority": "uk_nca"
+        }
+      }
+    ]
+  },
+  "agent_specifications": {
+    "agents": [
+      {
+        "agent_id": "AGENT_COMPLIANCE_001",
+        "agent_name": "Compliance Check Agent",
+        "agent_type": "state_graph",
+        "description": "Validates documents against compliance policies and determines approval/rejection",
+        "version": "1.0.0",
+        "language_model": {
+          "model_name": "gpt-4",
+          "model_version": "0613",
+          "deployment_name": "gpt4-prod",
+          "max_tokens": 2000,
+          "temperature": 0.3,
+          "cost_per_token": {
+            "input": 0.00003,
+            "output": 0.0001
+          }
+        },
+        "workflow": {
+          "entry_point": "validate_request",
+          "nodes": [
+            {
+              "node_id": "validate_request",
+              "node_type": "function",
+              "description": "Validate input schema and rate limits",
+              "timeout_seconds": 5,
+              "retry_count": 0,
+              "next_nodes": ["retrieve_policies"]
+            },
+            {
+              "node_id": "retrieve_policies",
+              "node_type": "tool_call",
+              "description": "Query Neo4j for applicable compliance policies",
+              "tool_name": "graph_retriever",
+              "timeout_seconds": 30,
+              "retry_count": 3,
+              "cache_enabled": true,
+              "cache_ttl_seconds": 3600,
+              "next_nodes": ["extract_entities"]
+            },
+            {
+              "node_id": "extract_entities",
+              "node_type": "tool_call",
+              "description": "Extract entities and relationships from document",
+              "tool_name": "document_analyzer",
+              "timeout_seconds": 60,
+              "retry_count": 2,
+              "next_nodes": ["evaluate_rules"]
+            },
+            {
+              "node_id": "evaluate_rules",
+              "node_type": "tool_call",
+              "description": "Apply deterministic compliance rules",
+              "tool_name": "rule_evaluator",
+              "timeout_seconds": 10,
+              "retry_count": 1,
+              "next_nodes": ["generate_decision"]
+            },
+            {
+              "node_id": "generate_decision",
+              "node_type": "llm_call",
+              "description": "Generate structured compliance decision",
+              "timeout_seconds": 45,
+              "retry_count": 2,
+              "prompt_template": "compliance_decision_generation_v1",
+              "next_nodes": ["review_gate"]
+            },
+            {
+              "node_id": "review_gate",
+              "node_type": "decision",
+              "description": "Determine if human review required",
+              "conditions": [
+                {
+                  "condition": "risk_score > 4.0 OR confidence < 0.85",
+                  "next_node": "route_to_review"
+                },
+                {
+                  "condition": "else",
+                  "next_node": "persist_audit"
+                }
+              ]
+            },
+            {
+              "node_id": "route_to_review",
+              "node_type": "tool_call",
+              "description": "Route high-risk decision to human reviewer",
+              "tool_name": "kafka_publish",
+              "timeout_seconds": 10,
+              "retry_count": 5,
+              "next_nodes": ["persist_audit"]
+            },
+            {
+              "node_id": "persist_audit",
+              "node_type": "tool_call",
+              "description": "Log decision to immutable audit trail",
+              "tool_name": "audit_logger",
+              "timeout_seconds": 5,
+              "retry_count": 3,
+              "next_nodes": ["publish_result"]
+            },
+            {
+              "node_id": "publish_result",
+              "node_type": "tool_call",
+              "description": "Publish decision to Kafka topic",
+              "tool_name": "kafka_publish",
+              "timeout_seconds": 10,
+              "retry_count": 5,
+              "next_nodes": []
+            }
+          ]
+        },
+        "state_schema": {
+          "request_id": "str",
+          "user_id": "str",
+          "client_id": "str",
+          "document_ids": "list[str]",
+          "retrieved_policies": "list[dict]",
+          "extracted_entities": "dict",
+          "rule_violations": "list[dict]",
+          "decision": "str",
+          "risk_score": "float",
+          "confidence_score": "float",
+          "requires_review": "bool",
+          "provenance": "list[dict]",
+          "audit_events": "list[dict]"
+        },
+        "tools_used": [
+          "graph_retriever",
+          "document_analyzer",
+          "rule_evaluator",
+          "kafka_publish",
+          "audit_logger"
+        ],
+        "performance_targets": {
+          "latency_p99_ms": 5000,
+          "throughput_per_hour": 600,
+          "accuracy_percent": 95
+        },
+        "error_handling": {
+          "on_timeout": "escalate_to_review",
+          "on_invalid_input": "return_400_error",
+          "on_policy_not_found": "use_fallback_policy"
+        }
+      },
+      {
+        "agent_id": "AGENT_ONBOARDING_001",
+        "agent_name": "Client Onboarding Agent",
+        "agent_type": "state_graph",
+        "description": "Orchestrates KYC/AML onboarding workflow",
+        "version": "1.0.0",
+        "language_model": {
+          "model_name": "gpt-4",
+          "model_version": "0613",
+          "deployment_name": "gpt4-prod",
+          "max_tokens": 2500,
+          "temperature": 0.2
+        },
+        "workflow": {
+          "entry_point": "parse_kyc_input",
+          "nodes": [
+            {
+              "node_id": "parse_kyc_input",
+              "node_type": "function",
+              "description": "Normalize and validate KYC input data",
+              "timeout_seconds": 10,
+              "next_nodes": ["retrieve_regulations"]
+            },
+            {
+              "node_id": "retrieve_regulations",
+              "node_type": "tool_call",
+              "description": "Query Neo4j for KYC/AML regulations",
+              "tool_name": "graph_retriever",
+              "timeout_seconds": 30,
+              "next_nodes": ["check_sanctions"]
+            },
+            {
+              "node_id": "check_sanctions",
+              "node_type": "tool_call",
+              "description": "Screen client and beneficial owners against sanctions lists",
+              "tool_name": "sanctions_check",
+              "timeout_seconds": 20,
+              "retry_count": 2,
+              "next_nodes": ["analyze_pep"]
+            },
+            {
+              "node_id": "analyze_pep",
+              "node_type": "llm_call",
+              "description": "Perform PEP analysis on beneficial owners",
+              "timeout_seconds": 30,
+              "next_nodes": ["assess_risk"]
+            },
+            {
+              "node_id": "assess_risk",
+              "node_type": "function",
+              "description": "Calculate AML risk score and tier",
+              "timeout_seconds": 15,
+              "next_nodes": ["generate_profile"]
+            },
+            {
+              "node_id": "generate_profile",
+              "node_type": "llm_call",
+              "description": "Generate client compliance profile",
+              "timeout_seconds": 40,
+              "next_nodes": ["escalate_if_needed"]
+            },
+            {
+              "node_id": "escalate_if_needed",
+              "node_type": "decision",
+              "description": "Determine if human review required",
+              "conditions": [
+                {
+                  "condition": "risk_score >= 5.0 OR sanctions_match OR pep_found",
+                  "next_node": "route_to_escalation"
+                },
+                {
+                  "condition": "else",
+                  "next_node": "persist_record"
+                }
+              ]
+            },
+            {
+              "node_id": "route_to_escalation",
+              "node_type": "tool_call",
+              "description": "Route to human reviewer queue",
+              "tool_name": "kafka_publish",
+              "timeout_seconds": 10,
+              "next_nodes": ["persist_record"]
+            },
+            {
+              "node_id": "persist_record",
+              "node_type": "tool_call",
+              "description": "Persist onboarded client to Neo4j",
+              "tool_name": "audit_logger",
+              "timeout_seconds": 15,
+              "next_nodes": []
+            }
+          ]
+        },
+        "state_schema": {
+          "request_id": "str",
+          "client_id": "str",
+          "kyc_data": "dict",
+          "aml_risk_score": "float",
+          "beneficial_owners": "list[dict]",
+          "sanctions_check": "dict",
+          "pep_found": "bool",
+          "risk_tier": "str",
+          "final_status": "str",
+          "provenance": "list[dict]"
+        },
+        "tools_used": [
+          "graph_retriever",
+          "sanctions_check",
+          "kafka_publish",
+          "audit_logger"
+        ]
+      },
+      {
+        "agent_id": "AGENT_COPILOT_001",
+        "agent_name": "Compliance Copilot",
+        "agent_type": "message_graph",
+        "description": "Conversational AI for compliance Q&A grounded in policy corpus",
+        "version": "1.0.0",
+        "language_model": {
+          "model_name": "gpt-4",
+          "model_version": "0613",
+          "deployment_name": "gpt4-prod",
+          "max_tokens": 1500,
+          "temperature": 0.5
+        },
+        "workflow": {
+          "entry_point": "parse_query",
+          "nodes": [
+            {
+              "node_id": "parse_query",
+              "node_type": "llm_call",
+              "description": "Extract intent and entities from user query",
+              "timeout_seconds": 10,
+              "next_nodes": ["retrieve_context"]
+            },
+            {
+              "node_id": "retrieve_context",
+              "node_type": "tool_call",
+              "description": "Retrieve relevant policies via GraphRAG",
+              "tool_name": "vector_search",
+              "timeout_seconds": 15,
+              "cache_enabled": true,
+              "next_nodes": ["augment_context"]
+            },
+            {
+              "node_id": "augment_context",
+              "node_type": "function",
+              "description": "Add recent decisions and precedents",
+              "timeout_seconds": 10,
+              "next_nodes": ["generate_response"]
+            },
+            {
+              "node_id": "generate_response",
+              "node_type": "llm_call",
+              "description": "Generate grounded response with citations",
+              "timeout_seconds": 30,
+              "next_nodes": ["add_citations"]
+            },
+            {
+              "node_id": "add_citations",
+              "node_type": "function",
+              "description": "Attach provenance and citations",
+              "timeout_seconds": 5,
+              "next_nodes": ["gate_output"]
+            },
+            {
+              "node_id": "gate_output",
+              "node_type": "function",
+              "description": "Check for sensitive info and confidence",
+              "timeout_seconds": 5,
+              "next_nodes": ["persist_conversation"]
+            },
+            {
+              "node_id": "persist_conversation",
+              "node_type": "tool_call",
+              "description": "Store conversation for audit",
+              "tool_name": "audit_logger",
+              "timeout_seconds": 5,
+              "next_nodes": []
+            }
+          ]
+        },
+        "state_schema": {
+          "user_id": "str",
+          "session_id": "str",
+          "messages": "list[dict]",
+          "retrieved_docs": "list[dict]",
+          "response": "str",
+          "citations": "list[dict]",
+          "confidence_score": "float"
+        },
+        "tools_used": [
+          "vector_search",
+          "audit_logger"
+        ],
+        "conversation_management": {
+          "max_history_turns": 20,
+          "session_timeout_minutes": 30,
+          "context_window_tokens": 6000
+        }
+      }
+    ]
+  },
+  "tool_registry": {
+    "tools": [
+      {
+        "tool_id": "TOOL_GRAPH_RETRIEVER",
+        "tool_name": "graph_retriever",
+        "description": "Query Neo4j for policies, regulations, entities, and precedents",
+        "category": "data_access",
+        "input_schema": {
+          "type": "object",
+          "properties": {
+            "query_type": {
+              "type": "string",
+              "enum": ["policy_search", "entity_lookup", "precedent_search", "relationship_query"],
+              "description": "Type of graph query to execute"
+            },
+            "search_terms": {
+              "type": "array",
+              "items": {"type": "string"},
+              "description": "Keywords to search for"
+            },
+            "filters": {
+              "type": "object",
+              "description": "Additional filter criteria (jurisdiction, status, etc.)"
+            }
+          },
+          "required": ["query_type", "search_terms"]
+        },
+        "output_schema": {
+          "results": "list[dict]",
+          "total_count": "int",
+          "search_depth": "int"
+        },
+        "timeout_seconds": 30,
+        "retry_policy": {
+          "max_retries": 3,
+          "backoff_type": "exponential",
+          "initial_delay_ms": 100
+        },
+        "caching": {
+          "enabled": true,
+          "ttl_seconds": 3600,
+          "cache_key_fields": ["query_type", "search_terms"]
+        },
+        "cost_per_call_usd": 0.001,
+        "sla": {
+          "latency_p99_ms": 1000,
+          "availability_percent": 99.5
+        }
+      },
+      {
+        "tool_id": "TOOL_DOCUMENT_ANALYZER",
+        "tool_name": "document_analyzer",
+        "description": "Extract entities, relationships, and evidence from documents via NER and LLM",
+        "category": "nlp",
+        "input_schema": {
+          "document_id": "str",
+          "document_text": "str",
+          "extraction_type": {
+            "type": "string",
+            "enum": ["entities", "relationships", "evidence"]
+          }
+        },
+        "output_schema": {
+          "extracted_data": "dict",
+          "confidence_scores": "dict",
+          "provenance": "list[str]"
+        },
+        "timeout_seconds": 60,
+        "retry_policy": {
+          "max_retries": 2,
+          "backoff_type": "exponential"
+        },
+        "cost_per_call_usd": 0.002
+      },
+      {
+        "tool_id": "TOOL_RULE_EVALUATOR",
+        "tool_name": "rule_evaluator",
+        "description": "Deterministic evaluation of compliance rules (no LLM)",
+        "category": "rules_engine",
+        "input_schema": {
+          "rule_id": "str",
+          "context": "dict",
+          "entity_data": "dict"
+        },
+        "output_schema": {
+          "rule_passed": "bool",
+          "violation_details": "optional[dict]",
+          "remediation_steps": "list[str]"
+        },
+        "timeout_seconds": 10,
+        "retry_policy": {
+          "max_retries": 1
+        },
+        "cost_per_call_usd": 0.0001
+      },
+      {
+        "tool_id": "TOOL_VECTOR_SEARCH",
+        "tool_name": "vector_search",
+        "description": "Semantic search via Azure Search (embeddings-based GraphRAG)",
+        "category": "retrieval",
+        "input_schema": {
+          "query_text": "str",
+          "top_k": {"type": "int", "default": 10},
+          "filters": "optional[dict]"
+        },
+        "output_schema": {
+          "documents": "list[dict]",
+          "scores": "list[float]",
+          "retrieved_at": "datetime"
+        },
+        "timeout_seconds": 15,
+        "caching": {
+          "enabled": true,
+          "ttl_seconds": 1800
+        }
+      },
+      {
+        "tool_id": "TOOL_SANCTIONS_CHECK",
+        "tool_name": "sanctions_check",
+        "description": "Screen entities against sanctions lists (OFAC, EU, HMT)",
+        "category": "compliance_check",
+        "input_schema": {
+          "client_name": "str",
+          "client_country": "str",
+          "beneficial_owners": "list[dict]"
+        },
+        "output_schema": {
+          "is_sanctioned": "bool",
+          "matches": "list[dict]",
+          "check_timestamp": "datetime"
+        },
+        "timeout_seconds": 20,
+        "retry_policy": {
+          "max_retries": 2
+        },
+        "external_api": {
+          "provider": "worldcheck",
+          "endpoint": "https://api.worldcheck.com/v1/sanctions-check"
+        },
+        "cost_per_call_usd": 0.005
+      },
+      {
+        "tool_id": "TOOL_KAFKA_PUBLISH",
+        "tool_name": "kafka_publish",
+        "description": "Publish events to Kafka topics for async processing",
+        "category": "messaging",
+        "input_schema": {
+          "topic": "str",
+          "key": "str",
+          "payload": "dict"
+        },
+        "output_schema": {
+          "message_id": "str",
+          "partition": "int",
+          "offset": "int"
+        },
+        "timeout_seconds": 10,
+        "retry_policy": {
+          "max_retries": 5,
+          "backoff_type": "exponential"
+        },
+        "idempotency": {
+          "enabled": true,
+          "id_field": "request_id"
+        },
+        "cost_per_call_usd": 0.0001
+      },
+      {
+        "tool_id": "TOOL_AUDIT_LOGGER",
+        "tool_name": "audit_logger",
+        "description": "Immutable append-only audit logging to Event Hub",
+        "category": "logging",
+        "input_schema": {
+          "event_type": "str",
+          "actor_id": "str",
+          "resource_id": "str",
+          "action": "str",
+          "result": "str",
+          "metadata": "dict"
+        },
+        "output_schema": {
+          "log_id": "str",
+          "timestamp": "datetime",
+          "immutable": "bool"
+        },
+        "timeout_seconds": 5,
+        "retry_policy": {
+          "max_retries": 3
+        },
+        "retention_policy": {
+          "retention_years": 7,
+          "immutable": true,
+          "encryption": "AES-256"
+        },
+        "cost_per_call_usd": 0.0002
+      }
+    ]
+  },
+  "sample_decisions": {
+    "decisions": [
+      {
+        "decision_id": "DECISION_001",
+        "decision_type": "compliance_check",
+        "request_id": "req_2024_001",
+        "client_id": "CLIENT_ABC_CORP_001",
+        "document_id": "DOC_CREDIT_AGREEMENT_001",
+        "created_at": "2024-07-20T14:30:00Z",
+        "decision": "APPROVED",
+        "decision_confidence": 0.97,
+        "risk_score": 2.1,
+        "decision_rationale": "Document contains all required sections per POLICY_KYC_001. Beneficial ownership verified with high confidence. No sanctions matches. Standard approval recommended.",
+        "violations_found": [],
+        "retrieved_policies": [
+          {
+            "policy_id": "POLICY_KYC_001",
+            "policy_version": "3.2.1",
+            "match_confidence": 0.98
+          }
+        ],
+        "retrieved_regulations": [
+          {
+            "regulation_id": "REGULATION_MIFID_II_001",
+            "match_confidence": 0.85
+          }
+        ],
+        "tool_calls": [
+          {
+            "tool_name": "graph_retriever",
+            "execution_time_ms": 245,
+            "result_count": 5
+          },
+          {
+            "tool_name": "document_analyzer",
+            "execution_time_ms": 2100,
+            "extracted_entities_count": 12
+          },
+          {
+            "tool_name": "rule_evaluator",
+            "execution_time_ms": 89,
+            "rules_evaluated": 8,
+            "rules_passed": 8
+          }
+        ],
+        "provenance": [
+          {
+            "source": "POLICY_KYC_001",
+            "confidence": 0.98,
+            "retrieval_time_ms": 245
+          },
+          {
+            "source": "document_analyzer",
+            "confidence": 0.92,
+            "retrieval_time_ms": 2100
+          }
+        ],
+        "human_review_required": false,
+        "approved_by": "system_auto_approval",
+        "audit_events": [
+          {
+            "event_type": "decision_created",
+            "timestamp": "2024-07-20T14:30:00Z",
+            "actor": "AGENT_COMPLIANCE_001",
+            "action": "create_decision"
+          },
+          {
+            "event_type": "decision_approved",
+            "timestamp": "2024-07-20T14:30:15Z",
+            "actor": "AGENT_COMPLIANCE_001",
+            "action": "auto_approve",
+            "reason": "confidence_threshold_met"
+          }
+        ]
+      },
+      {
+        "decision_id": "DECISION_002",
+        "decision_type": "onboarding_assessment",
+        "request_id": "req_2024_002",
+        "client_id": "CLIENT_XYZ_FUND_001",
+        "created_at": "2024-07-20T15:45:00Z",
+        "decision": "PENDING_REVIEW",
+        "decision_confidence": 0.71,
+        "risk_score": 5.6,
+        "risk_tier": "high",
+        "decision_rationale": "PEP detected (beneficial owner is US Congress member). High-value transfers detected. Requires enhanced due diligence and human review per AML_TFTP_001.",
+        "risk_factors": [
+          {
+            "factor": "pep_beneficial_owner",
+            "risk_level": "high",
+            "details": "Jane Smith identified as former US Congress member"
+          },
+          {
+            "factor": "high_transaction_value",
+            "risk_level": "medium",
+            "details": "Initial transaction $50M exceeds standard threshold"
+          },
+          {
+            "factor": "jurisdictional_exposure",
+            "risk_level": "medium",
+            "details": "Client operations in 12 jurisdictions"
+          }
+        ],
+        "violations_found": [
+          {
+            "rule_id": "KYC_REQ_002",
+            "violation": "Source of funds documentation incomplete",
+            "severity": "high",
+            "remediation": "Request updated bank statements for all funding sources"
+          }
+        ],
+        "escalation_reason": "pep_detected_and_risk_score_high",
+        "escalation_queue": "kyc_review_queue_001",
+        "escalation_timestamp": "2024-07-20T15:45:30Z",
+        "human_review_required": true,
+        "review_assigned_to": "kyc_manager_001",
+        "review_due_date": "2024-07-22T17:00:00Z",
+        "audit_events": [
+          {
+            "event_type": "decision_created",
+            "timestamp": "2024-07-20T15:45:00Z"
+          },
+          {
+            "event_type": "escalation_triggered",
+            "timestamp": "2024-07-20T15:45:30Z",
+            "reason": "pep_detected"
+          },
+          {
+            "event_type": "assigned_to_reviewer",
+            "timestamp": "2024-07-20T15:46:00Z",
+            "assigned_to": "kyc_manager_001"
+          }
+        ]
+      }
+    ]
+  },
+  "audit_logs": {
+    "audit_events": [
+      {
+        "log_id": "AUDIT_001",
+        "event_type": "decision_created",
+        "timestamp": "2024-07-20T14:30:00Z",
+        "actor_id": "AGENT_COMPLIANCE_001",
+        "actor_type": "system",
+        "resource_id": "req_2024_001",
+        "resource_type": "compliance_check",
+        "action": "create_decision",
+        "action_detail": {
+          "decision_type": "compliance_check",
+          "outcome": "APPROVED"
+        },
+        "result": "success",
+        "metadata": {
+          "request_id": "req_2024_001",
+          "client_id": "CLIENT_ABC_CORP_001",
+          "ip_address_hash": "sha256_abc123",
+          "session_id": "sess_2024_001"
+        },
+        "duration_ms": 2434,
+        "status_code": 200,
+        "immutable": true,
+        "encrypted": true
+      },
+      {
+        "log_id": "AUDIT_002",
+        "event_type": "document_uploaded",
+        "timestamp": "2024-07-20T12:15:00Z",
+        "actor_id": "analyst_john_doe",
+        "actor_type": "user",
+        "resource_id": "DOC_CREDIT_AGREEMENT_001",
+        "resource_type": "document",
+        "action": "upload",
+        "action_detail": {
+          "file_name": "credit_agreement.pdf",
+          "file_size_bytes": 2304000,
+          "file_hash": "sha256_def456"
+        },
+        "result": "success",
+        "metadata": {
+          "client_id": "CLIENT_ABC_CORP_001",
+          "ip_address_hash": "sha256_xyz789"
+        },
+        "immutable": true
+      },
+      {
+        "log_id": "AUDIT_003",
+        "event_type": "policy_retrieved",
+        "timestamp": "2024-07-20T14:30:15Z",
+        "actor_id": "AGENT_COMPLIANCE_001",
+        "actor_type": "system",
+        "resource_id": "POLICY_KYC_001",
+        "resource_type": "policy",
+        "action": "retrieve",
+        "action_detail": {
+          "retrieval_method": "graph_query",
+          "query_terms": ["kyc", "corporate", "beneficial_owner"],
+          "results_returned": 5
+        },
+        "result": "success",
+        "metadata": {
+          "retrieval_latency_ms": 245
+        },
+        "immutable": true
+      }
+    ]
+  },
+  "metrics_and_monitoring": {
+    "performance_metrics": {
+      "compliance_agent": {
+        "avg_latency_ms": 3200,
+        "p99_latency_ms": 4800,
+        "throughput_per_hour": 550,
+        "error_rate_percent": 0.2,
+        "approval_rate_percent": 78,
+        "escalation_rate_percent": 22
+      },
+      "onboarding_agent": {
+        "avg_latency_ms": 8500,
+        "p99_latency_ms": 12000,
+        "throughput_per_day": 450,
+        "error_rate_percent": 0.3,
+        "auto_approval_rate_percent": 65,
+        "escalation_rate_percent": 35
+      },
+      "copilot_agent": {
+        "avg_latency_ms": 1500,
+        "p99_latency_ms": 1950,
+        "queries_per_hour": 1200,
+        "avg_session_duration_minutes": 12.5,
+        "user_satisfaction_score": 4.6
+      }
+    },
+    "cost_metrics": {
+      "azure_openai_tokens_used": 125000000,
+      "azure_openai_cost_usd": 1875,
+      "neo4j_queries_executed": 450000,
+      "neo4j_cost_usd": 520,
+      "azure_search_queries": 320000,
+      "azure_search_cost_usd": 380,
+      "total_monthly_cost_usd": 2775
+    },
+    "compliance_metrics": {
+      "audit_log_coverage_percent": 100,
+      "pii_redaction_accuracy_percent": 99.8,
+      "decision_traceability_percent": 100,
+      "policy_compliance_percent": 98.5,
+      "security_incidents": 0,
+      "data_breaches": 0
+    },
+    "sla_compliance": {
+      "uptime_percent": 99.97,
+      "availability_percent": 99.98,
+      "latency_p99_met_percent": 97.3,
+      "throughput_target_met_percent": 98.1
+    }
+  }
+}

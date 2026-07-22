@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic AI Platform — Live Dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:#f4f6f9; --surface:#fff; --surface-2:#fafbfc;
+    --ink:#0e1217; --ink-2:#51565e; --muted:#8a8f98;
+    --grid:#e6e9ee; --hair:rgba(14,18,23,.10);
+    --accent:#2a78d6; --accent-soft:#eaf2fc;
+    --good:#0ca30c; --warning:#d98a00; --critical:#d03b3b;
+    --good-bg:rgba(12,163,12,.12); --warn-bg:rgba(217,138,0,.14); --crit-bg:rgba(208,59,59,.12);
+    --radius:14px; --shadow:0 1px 2px rgba(14,18,23,.04),0 4px 16px rgba(14,18,23,.05);
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
+    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#17273b;
+    --good-bg:rgba(12,163,12,.20); --warn-bg:rgba(217,138,0,.20); --crit-bg:rgba(208,59,59,.20);
+  }}
+  :root[data-theme="dark"]{
+    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
+    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#17273b;
+    --good-bg:rgba(12,163,12,.20); --warn-bg:rgba(217,138,0,.20); --crit-bg:rgba(208,59,59,.20);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 60px}
+  .num{font-variant-numeric:tabular-nums}
+  a{color:var(--accent)}
+
+  header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}
+  h1{font-size:clamp(21px,2.8vw,28px);font-weight:680;letter-spacing:-.02em;margin:0}
+  .sub{margin:4px 0 0;color:var(--ink-2);font-size:13.5px}
+  .tags{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .badge{font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--ink-2);background:var(--surface)}
+  .badge.live{color:var(--good);background:var(--good-bg);border-color:transparent;display:inline-flex;align-items:center;gap:6px}
+  .badge.live .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  button{font:inherit;cursor:pointer}
+  .btn{font-size:13px;padding:8px 14px;border-radius:9px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2)}
+  .btn:hover{color:var(--ink)}
+  .btn.pri{background:var(--accent);color:#fff;border-color:transparent;font-weight:600}
+
+  .meta{margin:16px 0 24px;font-size:12.5px;color:var(--muted);font-family:var(--mono)}
+  .eyebrow{font-size:12px;font-weight:640;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:30px 0 13px}
+
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}
+  .tile{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow)}
+  .tile .label{font-size:12px;color:var(--ink-2)}
+  .tile .value{font-size:clamp(19px,2.2vw,26px);font-weight:700;letter-spacing:-.02em;margin-top:7px}
+  .tile .foot{font-size:11px;color:var(--muted);margin-top:3px}
+
+  .cols{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start}
+  .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 2px;font-size:15px;font-weight:640}
+  .card .cap{margin:0 0 14px;font-size:12.5px;color:var(--muted)}
+  .stack{display:flex;flex-direction:column;gap:18px}
+
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--grid)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  tbody tr:hover{background:var(--surface-2)}
+  td.r,th.r{text-align:right}
+  .pill{font-size:11.5px;font-weight:620;padding:3px 9px;border-radius:6px;display:inline-block}
+  .pill.good{color:var(--good);background:var(--good-bg)}
+  .pill.warn{color:var(--warning);background:var(--warn-bg)}
+  .pill.crit{color:var(--critical);background:var(--crit-bg)}
+  .idc{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+
+  .barline{display:flex;height:14px;border-radius:6px;overflow:hidden;margin:2px 0 10px;background:var(--surface-2)}
+  .barline i{height:100%}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:11px;height:11px;border-radius:3px}
+
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--grid)}
+  .kv:last-child{border:none}
+  .kv b{font-weight:640}
+
+  form.try{display:flex;flex-direction:column;gap:10px}
+  .field{display:flex;flex-direction:column;gap:4px}
+  .field label{font-size:12px;color:var(--ink-2)}
+  input[type=text],select{font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
+  .row{display:flex;gap:10px;align-items:center}
+  .check{display:flex;gap:7px;align-items:center;font-size:13px;color:var(--ink-2)}
+  .result{font-size:12.5px;background:var(--surface-2);border:1px solid var(--hair);border-radius:9px;padding:11px;display:none}
+  .result.show{display:block}
+  .result .line{display:flex;justify-content:space-between;padding:2px 0}
+  .cite{border-left:2px solid var(--accent);padding:2px 0 2px 9px;margin-top:7px;font-size:12px}
+  .cite small{color:var(--muted)}
+  .ev{font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--grid)}
+  .ev:last-child{border:none}
+  .ev .t{font-weight:620}
+  .ev .d{color:var(--ink-2)}
+  .ev .ts{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .empty{font-size:12.5px;color:var(--muted);font-style:italic}
+
+  footer{margin-top:38px;padding-top:16px;border-top:1px solid var(--grid);font-size:12px;color:var(--muted)}
+  @media (max-width:940px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
+  @media (max-width:520px){.kpis{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Agentic AI Platform — Live Dashboard</h1>
+      <p class="sub">Real output from your running app · Investment Banking compliance workflows</p>
+    </div>
+    <div class="tags">
+      <span class="badge live"><span class="dot"></span>Live data</span>
+      <button class="btn" id="refresh" type="button">↻ Refresh</button>
+      <button class="btn" id="theme" type="button">◐ Theme</button>
+    </div>
+  </header>
+  <div class="meta" id="meta">Loading live data…</div>
+
+  <div class="eyebrow">Platform state</div>
+  <div class="kpis" id="kpis"></div>
+
+  <div class="eyebrow">Compliance decisions across all demo clients</div>
+  <div class="cols">
+    <div class="card">
+      <h3>Client risk decisions</h3>
+      <p class="cap">Each client run through the real compliance workflow (read-only scan)</p>
+      <div class="barline" id="decBar"></div>
+      <div class="legend" style="margin-bottom:12px">
+        <span><i class="sw" style="background:var(--good)"></i>pass</span>
+        <span><i class="sw" style="background:var(--warning)"></i>warn</span>
+        <span><i class="sw" style="background:var(--critical)"></i>fail</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Client</th><th>Name</th><th>Country</th><th class="r">Risk</th><th class="r">Conf.</th><th>Decision</th><th>Review</th></tr></thead>
+          <tbody id="decRows"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="stack">
+      <div class="card">
+        <h3>Review queue</h3>
+        <p class="cap">Human-in-the-loop tasks created by real inspect calls</p>
+        <div class="kv"><span>Pending</span><b id="revPending" class="num">–</b></div>
+        <div class="kv"><span>Resolved</span><b id="revResolved" class="num">–</b></div>
+      </div>
+
+      <div class="card">
+        <h3>Recent audit events</h3>
+        <p class="cap">Immutable trail from live API calls</p>
+        <div id="auditList"><div class="empty">No audit events yet — run a check below.</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="eyebrow">Try the agents live</div>
+  <div class="cols">
+    <div class="card">
+      <h3>KYC / AML onboarding</h3>
+      <p class="cap">Posts to <span class="idc">/api/agents/onboarding/kyc</span> and shows the real result</p>
+      <form class="try" id="kycForm">
+        <div class="row">
+          <div class="field" style="flex:1"><label>Client name</label><input type="text" id="kycName" value="Globex Ltd"></div>
+          <div class="field" style="width:110px"><label>Jurisdiction</label>
+            <select id="kycJur"><option>US</option><option>GB</option><option>IR</option><option>SY</option><option>KP</option></select>
+          </div>
+        </div>
+        <label class="check"><input type="checkbox" id="kycPep" checked> Include a PEP beneficial owner (Jane Doe)</label>
+        <div class="row"><button class="btn pri" type="submit">Run KYC check</button></div>
+      </form>
+      <div class="result" id="kycResult"></div>
+    </div>
+
+    <div class="card">
+      <h3>Compliance copilot</h3>
+      <p class="cap">Posts to <span class="idc">/api/copilot/query</span> — real citation retrieval</p>
+      <form class="try" id="copForm">
+        <div class="field"><label>Question</label><input type="text" id="copQ" value="suspicious activity reporting requirements"></div>
+        <div class="row"><button class="btn pri" type="submit">Ask copilot</button></div>
+      </form>
+      <div class="result" id="copResult"></div>
+    </div>
+  </div>
+
+  <footer id="footer">Live view served by your FastAPI app. Numbers come from the demo CSVs in <span class="idc">data/</span> — small by design.</footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const pill = d => d==='pass'?'good':d==='warn'?'warn':'crit';
+
+$('#theme').onclick = () => {
+  const r = document.documentElement, cur = r.getAttribute('data-theme');
+  const dark = matchMedia('(prefers-color-scheme:dark)').matches;
+  r.setAttribute('data-theme', cur==='dark'?'light':cur==='light'?'dark':(dark?'light':'dark'));
+};
+
+async function load() {
+  $('#meta').textContent = 'Refreshing…';
+  let d;
+  try { d = await (await fetch('/api/dashboard/summary')).json(); }
+  catch (e) { $('#meta').textContent = 'Could not reach /api/dashboard/summary — is the app running?'; return; }
+
+  $('#meta').textContent = `source: ${d.data_source}  ·  generated ${d.generated_at}`;
+  const c = d.counts || {};
+  const kpi = [
+    ['Clients', c.ClientProfile||0, 'profiles loaded'],
+    ['Policies', c.Policy||0, 'compliance policies'],
+    ['Regulations', c.Regulation||0, 'jurisdictional rules'],
+    ['Documents', c.Document||0, 'evidence-backed'],
+    ['Pending reviews', d.reviews.pending, 'awaiting a human'],
+    ['Audit events', d.audit.count, 'this session'],
+  ];
+  $('#kpis').innerHTML = kpi.map(([l,v,f])=>`<div class="tile"><div class="label">${l}</div><div class="value num">${v}</div><div class="foot">${f}</div></div>`).join('');
+
+  const s = d.decision_summary, tot = Math.max(1,(s.pass||0)+(s.warn||0)+(s.fail||0));
+  $('#decBar').innerHTML =
+    `<i style="width:${100*(s.pass||0)/tot}%;background:var(--good)"></i>`+
+    `<i style="width:${100*(s.warn||0)/tot}%;background:var(--warning)"></i>`+
+    `<i style="width:${100*(s.fail||0)/tot}%;background:var(--critical)"></i>`;
+
+  $('#decRows').innerHTML = d.decisions.map(x=>`<tr>
+    <td class="idc">${esc(x.client_id)}</td><td>${esc(x.name)}</td><td>${esc(x.country)}</td>
+    <td class="r num">${x.risk_score.toFixed(2)}</td><td class="r num">${x.confidence.toFixed(2)}</td>
+    <td><span class="pill ${pill(x.decision)}">${esc(x.decision)}</span></td>
+    <td>${x.review_required?'<span class="pill warn">required</span>':'—'}</td></tr>`).join('');
+
+  $('#revPending').textContent = d.reviews.pending;
+  $('#revResolved').textContent = d.reviews.resolved;
+
+  const ev = d.audit.recent||[];
+  $('#auditList').innerHTML = ev.length ? ev.map(e=>`<div class="ev">
+    <div class="t">${esc(e.event_type)} · <span class="d">${esc(e.result)}</span></div>
+    <div class="d">${esc(e.actor_id)} → ${esc(e.resource_id||'')}</div>
+    <div class="ts">${esc(e.timestamp)}</div></div>`).join('')
+    : '<div class="empty">No audit events yet — run a check below.</div>';
+}
+
+$('#refresh').onclick = load;
+
+$('#kycForm').onsubmit = async e => {
+  e.preventDefault();
+  const owners = $('#kycPep').checked ? [{full_name:'Jane Doe', pep_status:'pep_usa_congress'}] : [];
+  const body = {clientName:$('#kycName').value, jurisdiction:$('#kycJur').value, beneficialOwners:owners, requestId:'DASH-KYC-'+Date.now()};
+  const r = await (await fetch('/api/agents/onboarding/kyc',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})).json();
+  const box = $('#kycResult'); box.classList.add('show');
+  box.innerHTML =
+    `<div class="line"><span>Status</span><span class="pill ${r.status==='APPROVED'?'good':'warn'}">${esc(r.status)}</span></div>`+
+    `<div class="line"><span>Risk score</span><b class="num">${r.riskScore} / 10 (${esc(r.riskTier)})</b></div>`+
+    `<div class="line"><span>PEP found</span><b>${r.pepFound?'yes':'no'}</b></div>`+
+    `<div class="line"><span>Sanctions</span><b>${esc(r.sanctionsCheckResult)}</b></div>`+
+    `<div class="line"><span>Review task</span><b class="idc">${esc(r.reviewTaskId||'—')}</b></div>`;
+  load();
+};
+
+$('#copForm').onsubmit = async e => {
+  e.preventDefault();
+  const r = await (await fetch('/api/copilot/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:$('#copQ').value})})).json();
+  const box = $('#copResult'); box.classList.add('show');
+  box.innerHTML = `<div style="margin-bottom:6px">${esc(r.answer)}</div>` +
+    (r.citations||[]).map(c=>`<div class="cite"><b>${esc(c.source_id)}</b><br><small>${esc(c.excerpt)}</small></div>`).join('');
+};
+
+load();
+</script>
+</body>
+</html>

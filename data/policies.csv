@@ -1,0 +1,19 @@
+policy_id,department,summary,version,regulation_id
+POL-AML-01,Compliance,Enhanced due diligence required for high-risk clients,2024-01,REG-001
+POL-AML-02,Compliance,Suspicious activity reporting within 24 hours,2024-02,REG-001
+POL-KYC-01,Onboarding,Customer risk profile must be reviewed for transactions above threshold,2024-02,REG-002
+POL-KYC-02,Onboarding,Ongoing monitoring of customer activity,2024-04,REG-002
+POL-PEP-01,Compliance,Politically exposed persons require enhanced review,2024-03,REG-008
+POL-SAN-01,Compliance,Sanctions screening mandatory for all counterparties,2024-01,REG-003
+POL-MAR-01,Trading,Market abuse monitoring for suspicious trading patterns,2024-02,REG-004
+POL-BRB-01,Compliance,Anti-bribery controls for high-value engagements,2023-12,REG-005
+POL-BEN-01,Onboarding,Beneficial ownership verification for corporate clients,2024-03,REG-006
+POL-WIR-01,Operations,Cross-border wire transfers require secondary approval,2024-01,REG-007
+POL-WHB-01,Compliance,Whistleblower reports handled confidentially within 48 hours,2024-05,REG-009
+POL-DAT-01,Compliance,Client personal data retained and protected per privacy regulation,2024-06,REG-010
+POL-COR-01,Operations,Correspondent banking relationships require annual review,2024-04,REG-011
+POL-TRD-01,Trading,Trade finance transactions screened for AML red flags,2024-06,REG-012
+POL-VAS-01,Compliance,Virtual asset transfers require wallet attribution checks,2024-07,REG-013
+POL-STR-01,Compliance,Suspicious transaction reports filed within regulatory deadline,2024-05,REG-014
+POL-AML-03,Compliance,Adverse media screening for all new corporate clients,2024-05,REG-001
+POL-KYC-03,Onboarding,Customer identity re-verification every 24 months,2024-05,REG-002

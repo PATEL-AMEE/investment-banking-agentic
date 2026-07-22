@@ -1,0 +1,32 @@
+client_id,name,risk_score,country,pII_refs
+C123,Acme Corp,0.42,GB,['D-0001']
+C456,Globex Ltd,0.78,US,['D-0002']
+C789,Northwind Bank,0.91,IE,"['D-0003','D-0005']"
+C321,BluePeak Capital,0.63,DE,['D-0004']
+C555,Meridian Holdings,0.35,GB,['D-0006']
+C654,Cedar Point Partners,0.82,US,"['D-0007','D-0008']"
+C777,Lumiere Finance,0.55,FR,['D-0009']
+C888,Orient Star Trading,0.71,SG,"['D-0010','D-0011']"
+C999,Dragon Gate Capital,0.88,HK,['D-0012']
+C246,Tulip Ventures,0.29,NL,['D-0013']
+C357,Ibérica Asset Mgmt,0.66,ES,['D-0014']
+C468,Adriatic Group,0.74,IT,"['D-0015','D-0016']"
+C579,Kingsway Advisory,0.48,GB,['D-0017']
+C680,Summit Ridge Bank,0.93,US,"['D-0018','D-0019']"
+C791,Rheinland Invest,0.58,DE,['D-0020']
+C802,Shannon Capital,0.61,IE,['D-0021']
+C913,Provence Partners,0.79,FR,"['D-0022','D-0023']"
+C024,Lion City Wealth,0.37,SG,['D-0024']
+C135,Falcon Ridge Capital,0.69,CA,['D-0025']
+C147,Nordic Trust Bank,0.84,SE,"['D-0026','D-0027']"
+C258,Alpine Wealth AG,0.52,CH,['D-0028']
+C369,Sahara Trading Co,0.87,AE,"['D-0029','D-0030']"
+C470,Emerald Isle Finance,0.44,IE,['D-0031']
+C581,Pacific Rim Holdings,0.76,JP,"['D-0032','D-0033']"
+C692,Bosphorus Capital,0.81,TR,['D-0034']
+C703,Andes Partners,0.59,BR,"['D-0035','D-0036']"
+C814,Baltic Ventures,0.47,LT,['D-0037']
+C925,Cape Town Advisory,0.72,ZA,"['D-0038','D-0039']"
+C036,Ganges Capital,0.65,IN,"['D-0040','D-0041']"
+C158,Nile Delta Finance,0.90,EG,['D-0042']
+C269,Volga Investments,0.83,RU,"['D-0043','D-0044']"
