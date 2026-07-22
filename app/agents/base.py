@@ -43,26 +43,14 @@ def _graph_retriever(store: Any, jurisdiction: str) -> List[Dict[str, Any]]:
 
 
 def _policy_search(store: Any, query: str, limit: int = 3) -> List[Dict[str, Any]]:
-    """Keyword retrieval over Policy/Regulation nodes (GraphRAG-lite).
+    """GraphRAG retrieval over the policy/regulation/evidence corpus.
 
-    Replaced by embedding retrieval in Phase 2; the tool contract stays stable.
+    Vector similarity search enriched with knowledge-graph relationships;
+    see :mod:`app.services.retrieval`.
     """
-    fallback = [{"source_id": "POL-AML-01", "excerpt": "Enhanced customer due diligence is required for high-risk profiles."}]
-    nodes = getattr(store, "nodes", None)
-    if not nodes:
-        return fallback
-    terms = [term for term in query.lower().split() if len(term) > 3]
-    citations: List[Dict[str, Any]] = []
-    for node in nodes.values():
-        source_id = node.get("policy_id") or node.get("regulation_id")
-        if not source_id:
-            continue
-        text = ((node.get("summary") or "") + " " + (node.get("title") or "")).lower()
-        if terms and any(term in text for term in terms):
-            citations.append({"source_id": source_id, "excerpt": node.get("summary") or node.get("title") or ""})
-        if len(citations) >= limit:
-            break
-    return citations or fallback
+    from app.services.retrieval import get_retriever
+
+    return get_retriever(store).retrieve(query, k=limit)
 
 
 def build_default_registry() -> ToolRegistry:
