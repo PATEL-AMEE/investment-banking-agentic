@@ -107,8 +107,17 @@ def _escalate_if_needed(state: ComplianceState) -> Dict[str, Any]:
 
 
 def _generate_reasoning(state: ComplianceState) -> Dict[str, Any]:
+    # Dashboard scans run this workflow for every client; skip LLM calls
+    # there to avoid dozens of generations per page load.
+    if state.get("workflow_step") == "dashboard-scan":
+        return {"reasoning": {"summary": "Dashboard scan (no generated narrative).", "mode": "skipped"}}
     adapter = AzureOpenAIAdapter()
-    reasoning = adapter.generate_reasoning(f"Review {state['client_id']} with risk {state['risk_score']}")
+    reasoning = adapter.generate_reasoning(
+        f"Client {state['client_id']} was assessed with risk score {state['risk_score']:.2f}. "
+        f"Decision: {state['decision']} (confidence {state['confidence']:.2f}). "
+        f"Rules triggered: {', '.join(hit['rule_id'] for hit in state['rule_hits']) or 'none'}. "
+        f"Human review required: {state['review_required']}."
+    )
     return {"reasoning": reasoning}
 
 
@@ -121,12 +130,19 @@ def _assemble_result(state: ComplianceState) -> Dict[str, Any]:
         {"source_id": e.get("evidence_id"), "source_type": "Evidence", "excerpt": e.get("excerpt", "")}
         for e in state["evidence"]
     )
+    # Prefer the LLM-generated narrative as the human-facing rationale;
+    # fall back to the static sentence when generation is mocked/skipped.
+    reasoning = state["reasoning"]
+    if reasoning.get("mode") in ("azure", "openai-compatible") and reasoning.get("summary"):
+        rationale = reasoning["summary"]
+    else:
+        rationale = "Compliance workflow evaluated the client profile, supporting evidence, and policy applicability."
     return {
         "result": {
             "decision": state["decision"],
             "decisionCode": state["decision"].upper(),
             "confidence": round(state["confidence"], 2),
-            "rationale": "Compliance workflow evaluated the client profile, supporting evidence, and policy applicability.",
+            "rationale": rationale,
             "rule_hits": state["rule_hits"],
             "provenance": provenance,
             "reviewRequired": state["review_required"],

@@ -16,6 +16,7 @@ from langgraph.graph import END, START, StateGraph
 
 from app.agents.base import default_registry
 from app.services.dlp import guard_prompt
+from app.services.llm_adapter import LLMAdapter
 
 
 class CopilotState(TypedDict, total=False):
@@ -59,12 +60,16 @@ def _retrieve_citations(state: CopilotState) -> Dict[str, Any]:
 
 
 def _generate_answer(state: CopilotState) -> Dict[str, Any]:
-    answer = f"Policy guidance for: {state['query']}"
-    result: Dict[str, Any] = {"answer": answer, "citations": state["citations"]}
+    generation = LLMAdapter().answer_with_citations(state["query"], state["citations"])
+    result: Dict[str, Any] = {
+        "answer": generation["answer"],
+        "citations": state["citations"],
+        "generation_mode": generation["mode"],
+    }
     if state["guard"]["flags"]:
         result["guardrails"] = state["guard"]["flags"]
     return {
-        "messages": state["messages"] + [{"role": "assistant", "content": answer}],
+        "messages": state["messages"] + [{"role": "assistant", "content": generation["answer"]}],
         "result": result,
     }
 
