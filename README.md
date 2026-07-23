@@ -108,7 +108,10 @@ Application secrets are sourced from **Azure Key Vault** via the CSI
 secrets-store driver by default — `deploy_aks.sh` provisions the vault,
 uploads the secrets, and syncs them into the pod through a generated
 `SecretProviderClass` (guide §8); `USE_KEY_VAULT=false` falls back to a
-raw Kubernetes Secret.
+raw Kubernetes Secret. `ENABLE_EVENT_HUBS=true` additionally provisions
+**Azure Event Hubs** as the cloud Kafka backend (one hub per event topic;
+the app auto-detects the connection string and speaks Kafka over
+SASL_SSL, guide §10).
 
 ## Evaluation
 

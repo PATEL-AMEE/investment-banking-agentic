@@ -38,6 +38,12 @@ APP_INSIGHTS_NAME="${APP_INSIGHTS_NAME:-appi-investment-banking}"
 # raw Kubernetes Secret. Vault names are global — override on collision.
 USE_KEY_VAULT="${USE_KEY_VAULT:-true}"
 KEY_VAULT_NAME="${KEY_VAULT_NAME:-kv-investment-banking}"
+# Event streaming: ENABLE_EVENT_HUBS=true provisions an Azure Event Hubs
+# namespace (Standard tier — Kafka endpoint; ~£10/mo base, runs on trial
+# credit) plus one hub per canonical topic, and points the app's Kafka event
+# bus at it. Default off: the app falls back to its in-process bus.
+ENABLE_EVENT_HUBS="${ENABLE_EVENT_HUBS:-false}"
+EVENT_HUBS_NAMESPACE="${EVENT_HUBS_NAMESPACE:-ehns-investment-banking}"  # globally unique
 
 # Convenience: pull LLM/Neo4j settings from the local .env when not already
 # exported, so the cluster matches the local configuration (GitHub Models
@@ -115,6 +121,34 @@ if [[ "$ENABLE_MONITORING" == "true" ]]; then
     --query connectionString -o tsv 2>/dev/null || echo "")
 fi
 
+# --- Event Hubs (Kafka-compatible event streaming) ---------------------------
+KAFKA_BOOTSTRAP_SERVERS=""
+KAFKA_CONNECTION_STRING=""
+if [[ "$ENABLE_EVENT_HUBS" == "true" ]]; then
+  echo ">> Event Hubs namespace: $EVENT_HUBS_NAMESPACE (Kafka endpoint)"
+  az provider register --namespace Microsoft.EventHub --wait
+  az eventhubs namespace create \
+    --resource-group "$RESOURCE_GROUP" \
+    --name "$EVENT_HUBS_NAMESPACE" \
+    --location "$LOCATION" \
+    --sku Standard >/dev/null
+  # One hub per canonical topic (mirrors app/services/event_bus.py).
+  for topic in documents.ingested clients.onboarded compliance.decisions \
+               reviews.escalated reviews.resolved agents.supervisor.routed; do
+    az eventhubs eventhub create \
+      --resource-group "$RESOURCE_GROUP" \
+      --namespace-name "$EVENT_HUBS_NAMESPACE" \
+      --name "$topic" \
+      --partition-count 1 >/dev/null 2>&1 || true
+  done
+  KAFKA_CONNECTION_STRING=$(az eventhubs namespace authorization-rule keys list \
+    --resource-group "$RESOURCE_GROUP" \
+    --namespace-name "$EVENT_HUBS_NAMESPACE" \
+    --name RootManageSharedAccessKey \
+    --query primaryConnectionString -o tsv)
+  KAFKA_BOOTSTRAP_SERVERS="$EVENT_HUBS_NAMESPACE.servicebus.windows.net:9093"
+fi
+
 build_local() {
   echo ">> Building image locally with Docker and pushing: $IMAGE_REF"
   az acr login --name "$ACR_NAME"
@@ -189,6 +223,8 @@ setup_key_vault() {
   add_kv_secret NEO4J_URI neo4j-uri "$NEO4J_URI" || return 1
   add_kv_secret NEO4J_PASSWORD neo4j-password "$NEO4J_PASSWORD" || return 1
   add_kv_secret APPLICATIONINSIGHTS_CONNECTION_STRING appinsights-connection-string "$APPINSIGHTS_CONNECTION" || return 1
+  add_kv_secret KAFKA_BOOTSTRAP_SERVERS kafka-bootstrap-servers "$KAFKA_BOOTSTRAP_SERVERS" || return 1
+  add_kv_secret KAFKA_CONNECTION_STRING kafka-connection-string "$KAFKA_CONNECTION_STRING" || return 1
 
   echo ">> Applying SecretProviderClass (agentic-api-keyvault)"
   kubectl apply -f - <<SPC || return 1
@@ -249,6 +285,8 @@ if [[ "$USE_KEY_VAULT" != "true" ]]; then
   [[ -n "$NEO4J_URI" ]] && SECRET_ARGS+=("--from-literal=NEO4J_URI=$NEO4J_URI")
   [[ -n "$NEO4J_PASSWORD" ]] && SECRET_ARGS+=("--from-literal=NEO4J_PASSWORD=$NEO4J_PASSWORD")
   [[ -n "$APPINSIGHTS_CONNECTION" ]] && SECRET_ARGS+=("--from-literal=APPLICATIONINSIGHTS_CONNECTION_STRING=$APPINSIGHTS_CONNECTION")
+  [[ -n "$KAFKA_BOOTSTRAP_SERVERS" ]] && SECRET_ARGS+=("--from-literal=KAFKA_BOOTSTRAP_SERVERS=$KAFKA_BOOTSTRAP_SERVERS")
+  [[ -n "$KAFKA_CONNECTION_STRING" ]] && SECRET_ARGS+=("--from-literal=KAFKA_CONNECTION_STRING=$KAFKA_CONNECTION_STRING")
   kubectl create secret generic agentic-api-secrets \
     --namespace agentic-platform \
     "${SECRET_ARGS[@]}" \

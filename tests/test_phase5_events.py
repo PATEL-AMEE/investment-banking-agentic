@@ -61,3 +61,51 @@ def test_events_endpoint_exposes_recent():
     body = client.get("/api/events/recent", params={"topic": TOPIC_CLIENT_ONBOARDED}).json()
     assert body["count"] >= 1
     assert all(e["topic"] == TOPIC_CLIENT_ONBOARDED for e in body["events"])
+
+
+# --------------------------------------------------- Kafka connection config
+def test_kafka_config_plain_local_broker():
+    from app.services.event_bus import kafka_connection_config
+
+    config = kafka_connection_config(servers="localhost:9092", connection_string="")
+    assert config["bootstrap_servers"] == ["localhost:9092"]
+    assert "security_protocol" not in config  # plaintext dev broker
+
+
+def test_kafka_config_event_hubs_connection_string():
+    from app.services.event_bus import kafka_connection_config
+
+    conn = (
+        "Endpoint=sb://ehns-invbank.servicebus.windows.net/;"
+        "SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=abc123"
+    )
+    config = kafka_connection_config(servers="", connection_string=conn)
+    # Bootstrap derived from the namespace endpoint, Kafka port 9093.
+    assert config["bootstrap_servers"] == ["ehns-invbank.servicebus.windows.net:9093"]
+    assert config["security_protocol"] == "SASL_SSL"
+    assert config["sasl_mechanism"] == "PLAIN"
+    assert config["sasl_plain_username"] == "$ConnectionString"
+    assert config["sasl_plain_password"] == conn
+
+
+def test_kafka_config_explicit_servers_win_over_derived():
+    from app.services.event_bus import kafka_connection_config
+
+    conn = "Endpoint=sb://ehns-invbank.servicebus.windows.net/;SharedAccessKey=abc"
+    config = kafka_connection_config(servers="broker-a:9093,broker-b:9093", connection_string=conn)
+    assert config["bootstrap_servers"] == ["broker-a:9093", "broker-b:9093"]
+    assert config["security_protocol"] == "SASL_SSL"
+
+
+def test_kafka_config_generic_sasl_env(monkeypatch):
+    from app.services.event_bus import kafka_connection_config
+
+    monkeypatch.setenv("KAFKA_SECURITY_PROTOCOL", "SASL_SSL")
+    monkeypatch.setenv("KAFKA_SASL_MECHANISM", "SCRAM-SHA-256")
+    monkeypatch.setenv("KAFKA_SASL_USERNAME", "svc-agentic")
+    monkeypatch.setenv("KAFKA_SASL_PASSWORD", "s3cret")
+    config = kafka_connection_config(servers="kafka.internal:9093", connection_string="")
+    assert config["security_protocol"] == "SASL_SSL"
+    assert config["sasl_mechanism"] == "SCRAM-SHA-256"
+    assert config["sasl_plain_username"] == "svc-agentic"
+    assert config["sasl_plain_password"] == "s3cret"

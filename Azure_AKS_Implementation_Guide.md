@@ -298,17 +298,32 @@ break when the LLM is down.
 
 The event bus (`app/services/event_bus.py`) publishes domain events
 (document ingested, review escalated/resolved) in-process and mirrors them
-to Kafka when `KAFKA_BOOTSTRAP_SERVERS` is set.
+to Kafka when `KAFKA_BOOTSTRAP_SERVERS` or `KAFKA_CONNECTION_STRING` is
+set.
 
-**Option A — Azure Event Hubs (Kafka-compatible, managed; recommended):**
+**Option A — Azure Event Hubs (Kafka-compatible, managed; recommended).**
+Automated: `ENABLE_EVENT_HUBS=true bash infra/deploy_aks.sh` provisions a
+Standard-tier namespace (`EVENT_HUBS_NAMESPACE`, default
+`ehns-investment-banking` — names are global), creates one hub per
+canonical topic (`documents.ingested`, `clients.onboarded`,
+`compliance.decisions`, `reviews.escalated`, `reviews.resolved`,
+`agents.supervisor.routed`), and stores `KAFKA_CONNECTION_STRING` +
+`KAFKA_BOOTSTRAP_SERVERS` alongside the other application secrets (Key
+Vault or raw Secret). The app detects the Event Hubs connection string
+and switches on the Kafka endpoint convention automatically — SASL_SSL /
+PLAIN with the literal `$ConnectionString` username on port 9093 — no
+code or ConfigMap changes needed. Manual equivalent:
 
 ```bash
 az eventhubs namespace create --name ehns-investment-banking \
   --resource-group $RESOURCE_GROUP --location $LOCATION --sku Standard
-az eventhubs eventhub create --name platform-events \
+az eventhubs eventhub create --name compliance.decisions \
   --namespace-name ehns-investment-banking --resource-group $RESOURCE_GROUP
-# Kafka endpoint: ehns-investment-banking.servicebus.windows.net:9093
-# (SASL_SSL with the namespace connection string as password)
+az eventhubs namespace authorization-rule keys list \
+  --resource-group $RESOURCE_GROUP --namespace-name ehns-investment-banking \
+  --name RootManageSharedAccessKey --query primaryConnectionString -o tsv
+# -> set KAFKA_CONNECTION_STRING to that value (bootstrap server is
+#    derived automatically: ehns-investment-banking.servicebus.windows.net:9093)
 ```
 
 **Option B — Strimzi on AKS (self-managed, in-cluster):**
@@ -319,7 +334,8 @@ kubectl apply -f https://strimzi.io/install/latest?namespace=kafka -n kafka
 # then apply a Kafka CR (1-broker for dev, 3 for HA) per Strimzi docs
 ```
 
-Set `KAFKA_BOOTSTRAP_SERVERS` in the ConfigMap and restart. Verify with
+Set `KAFKA_BOOTSTRAP_SERVERS` (plus `KAFKA_SECURITY_PROTOCOL` /
+`KAFKA_SASL_*` for secured clusters) and restart. Verify with
 `GET /api/events/recent`.
 
 ## 11. Vertex AI fine-tuned adapters
