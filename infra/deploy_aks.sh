@@ -73,7 +73,7 @@ echo ">> Resource group: $RESOURCE_GROUP ($LOCATION)"
 az group create --name "$RESOURCE_GROUP" --location "$LOCATION" >/dev/null
 
 echo ">> Registering resource providers (first-time subscriptions)"
-for ns in Microsoft.ContainerRegistry Microsoft.ContainerService Microsoft.OperationalInsights microsoft.insights; do
+for ns in Microsoft.ContainerRegistry Microsoft.ContainerService Microsoft.OperationalInsights microsoft.insights Microsoft.KeyVault; do
   az provider register --namespace "$ns" --wait
 done
 
