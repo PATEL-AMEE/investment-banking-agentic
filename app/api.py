@@ -516,6 +516,57 @@ def client_status(application_id: str, current_user: dict = Depends(require_appl
     return applications.client_view(record, store)
 
 
+require_application_submit = require_permission(rbac.PERM_APPLICATION_SUBMIT)
+
+
+@app.post("/api/client/documents/{application_id}")
+def client_submit_documents(
+    application_id: str,
+    files: list[UploadFile] = File(...),
+    docTypes: list[str] = Form(...),
+    current_user: dict = Depends(require_application_submit),
+) -> Dict[str, Any]:
+    """Client uploads outstanding documents for their own application.
+
+    ``files`` and ``docTypes`` are parallel arrays (one required-document key
+    per file). Each file runs through the document-analysis agent internally;
+    the client gets back only the refreshed plain-language status view.
+    """
+    from app.services import applications
+
+    record = applications.get_application(application_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+    token_client_id = current_user.get("client_id")
+    if token_client_id and token_client_id != record["client_id"]:
+        audit_log.record(
+            event_type="rbac_check",
+            actor_id=str(current_user.get("sub", "user-unknown")),
+            action="resource:application.documents.submit",
+            result="denied",
+            resource_id=application_id,
+            metadata={"reason": "application belongs to a different client"},
+        )
+        raise HTTPException(status_code=403, detail="You may only submit documents for your own application")
+    if len(files) != len(docTypes):
+        raise HTTPException(status_code=422, detail="files and docTypes must align one-to-one")
+
+    upload_dir = Path("uploads") / "client" / application_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    submitted = []
+    for upload, doc_type in zip(files, docTypes):
+        if doc_type not in applications.REQUIRED_DOCUMENTS:
+            raise HTTPException(status_code=422, detail=f"Unknown document type: {doc_type}")
+        safe_name = Path(upload.filename or "upload.bin").name
+        file_path = upload_dir / f"{doc_type}-{safe_name}"
+        with file_path.open("wb") as handle:
+            handle.write(upload.file.read())
+        submitted.append({"doc_type": doc_type, "file_path": str(file_path), "original_name": safe_name})
+
+    applications.add_documents(record=record, submitted=submitted, store=store, audit_log=audit_log)
+    return applications.client_view(record, store)
+
+
 @app.get("/client")
 def client_portal_page() -> FileResponse:
     """Serve the client-facing intake/status portal."""

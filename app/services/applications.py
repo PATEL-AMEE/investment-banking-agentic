@@ -95,6 +95,7 @@ def submit_application(
         },
     }
     _applications[application_id] = record
+    _ensure_final_review(record, store, audit_log)
 
     if audit_log is not None:
         audit_log.record(
@@ -107,6 +108,113 @@ def submit_application(
             metadata={"product": product, "documents_missing": len(missing)},
         )
     return record
+
+
+def add_documents(
+    *,
+    record: Dict[str, Any],
+    submitted: List[Dict[str, Any]],
+    store: Any,
+    audit_log: Any = None,
+) -> Dict[str, Any]:
+    """Attach follow-up documents to an existing application.
+
+    Each file runs through the document-analysis agent (classification, NLP
+    enrichment, knowledge-graph persistence) — outputs stay internal. The
+    missing-document checklist shrinks accordingly, which is all the client
+    sees.
+
+    ``submitted`` items: ``{"doc_type": <REQUIRED_DOCUMENTS key>,
+    "file_path": <saved upload path>, "original_name": <client filename>}``.
+    """
+    from app.agents.document_analysis import run_document_analysis
+
+    accepted: List[str] = []
+    analyses = record["internal"].setdefault("documents", {})
+    for item in submitted:
+        doc_type = item.get("doc_type")
+        if doc_type not in REQUIRED_DOCUMENTS:
+            continue
+        analysis = run_document_analysis(
+            item["file_path"],
+            metadata={
+                "client_id": record["client_id"],
+                "application_id": record["application_id"],
+                "required_doc_type": doc_type,
+                "original_name": item.get("original_name", ""),
+            },
+            store=store,
+        )
+        analyses[doc_type] = analysis
+        accepted.append(doc_type)
+
+    provided = set(record["documents_provided"]) | set(accepted)
+    record["documents_provided"] = sorted(provided)
+    record["documents_missing"] = [key for key in REQUIRED_DOCUMENTS if key not in provided]
+    _ensure_final_review(record, store, audit_log)
+
+    if audit_log is not None and accepted:
+        audit_log.record(
+            event_type="client_documents_submitted",
+            actor_id=f"client-portal:{record['company_name']}",
+            action="submit_documents",
+            result="accepted",
+            resource_id=record["application_id"],
+            metadata={
+                "documents": ",".join(accepted),
+                "still_missing": len(record["documents_missing"]),
+            },
+        )
+    return record
+
+
+def _ensure_final_review(record: Dict[str, Any], store: Any, audit_log: Any = None) -> None:
+    """Maker-checker: no application is ever approved without a human.
+
+    Once the automated screening is clean AND the document file is complete,
+    the application still goes to the review queue as a low-severity final
+    onboarding approval. Flagged applications already carry their own
+    (higher-severity) review from the onboarding agent.
+    """
+    if record["internal"].get("review_task_id"):
+        return  # already in the review queue (screening flag or earlier final review)
+    if record["documents_missing"]:
+        return  # file incomplete — nothing for an approver to sign off yet
+    review_id = f"REV-ONB-{record['application_id'].split('-', 1)[-1]}"
+    details = {
+        "case_id": review_id,
+        "risk_level": "Low",
+        "agent_recommendation": "Approve — automated checks passed and the document file is complete",
+        "decision_summary": (
+            f"Onboarding application {record['application_id']} for {record['company_name']} "
+            f"({record['jurisdiction']}, {record['product']}): screening clean, all required documents received."
+        ),
+        "evidence": [REQUIRED_DOCUMENTS[key] + " received" for key in record["documents_provided"]],
+        "policy_references": [],
+        "approver_role": "Onboarding Approvals",
+        "available_actions": ["approve", "reject", "request_more_information", "escalate_to_senior_compliance"],
+    }
+    try:
+        store.add_review(
+            review_id,
+            record["client_id"],
+            "Final onboarding approval (all automated checks passed)",
+            "low",
+            f"client-portal:{record['company_name']}",
+            details=details,
+        )
+    except Exception:
+        return
+    record["internal"]["review_task_id"] = review_id
+    if audit_log is not None:
+        audit_log.record(
+            event_type="review_escalated",
+            actor_id="AGENT_ONBOARDING_001",
+            action="final_onboarding_approval",
+            result="pending",
+            resource_id=record["application_id"],
+            metadata={"review_task_id": review_id},
+        )
 
 
 def get_application(application_id: str) -> Optional[Dict[str, Any]]:
@@ -145,16 +253,22 @@ def client_view(record: Dict[str, Any], store: Any) -> Dict[str, Any]:
             status, message = "approved", "Your application has been approved. Our team will contact you to activate the account."
         else:
             status, message = "declined", "We are unable to proceed with your application at this time. Please contact your relationship manager."
-    elif review is not None or kyc_status == "PENDING_REVIEW":
-        status, message = "under_review", "Your application is under review by our team. No action is needed from you right now."
-    elif record["documents_missing"]:
+    elif record["documents_missing"] and review is None and kyc_status != "PENDING_REVIEW":
         status, message = "additional_documents_needed", "We need additional documents before your application can proceed."
     else:
-        status, message = "approved", "Your application has been approved. Our team will contact you to activate the account."
+        # Every complete application awaits a human decision — approval is
+        # never automatic (maker-checker), and clients are given the SLA.
+        status, message = (
+            "under_review",
+            "Your application is under review by our team. Decisions typically take up to 5 working days. "
+            "No action is needed from you right now.",
+        )
 
-    next_steps: List[str] = []
+    next_steps: List[Dict[str, str]] = []
     if record["documents_missing"] and status not in {"approved", "declined"}:
-        next_steps = [REQUIRED_DOCUMENTS[key] for key in record["documents_missing"]]
+        next_steps = [
+            {"key": key, "label": REQUIRED_DOCUMENTS[key]} for key in record["documents_missing"]
+        ]
 
     return {
         "applicationId": record["application_id"],

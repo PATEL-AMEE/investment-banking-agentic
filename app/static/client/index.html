@@ -34,9 +34,6 @@
   input[type=text],select,textarea{font:inherit;font-size:14px;width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
   textarea{resize:vertical;min-height:70px}
   input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
-  .docs{display:grid;gap:7px;margin-top:4px}
-  .doc{display:flex;gap:9px;align-items:center;font-size:13.5px;color:var(--ink-2);border:1px solid var(--hair);border-radius:9px;padding:9px 12px;background:var(--surface-2);cursor:pointer}
-  .doc input{accent-color:var(--accent)}
   button.pri{font:inherit;font-weight:600;font-size:14.5px;width:100%;margin-top:20px;padding:12px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer}
   button.pri:disabled{opacity:.5;cursor:default}
   .error{display:none;margin-top:14px;padding:10px 13px;border-radius:9px;background:var(--crit-bg);color:var(--critical);font-size:13px}
@@ -57,8 +54,12 @@
   .status-msg.declined{background:var(--crit-bg);color:var(--critical)}
   .status-msg.additional_documents_needed,.status-msg.received{background:var(--accent-soft);color:var(--accent)}
   .outstanding{margin:14px 0 0;padding:0 0 0 4px;list-style:none}
-  .outstanding li{font-size:13.5px;color:var(--ink-2);padding:6px 0;border-bottom:1px solid var(--grid)}
-  .outstanding li::before{content:"📄 ";margin-right:4px}
+  .outstanding li{font-size:13.5px;color:var(--ink-2);padding:8px 0;border-bottom:1px solid var(--grid);display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+  .outstanding li::before{content:"📄";margin-right:2px}
+  .outstanding .doclabel{flex:1;min-width:180px}
+  .outstanding input[type=file]{font-size:12px;color:var(--muted);max-width:230px}
+  button.upl{font:inherit;font-weight:600;font-size:13.5px;width:100%;margin-top:14px;padding:10px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer;display:none}
+  button.upl:disabled{opacity:.5;cursor:default}
   .meta{font-size:12px;color:var(--muted);margin-top:14px}
   .rowbtns{display:flex;gap:9px;margin-top:18px}
   .btn{font:inherit;font-size:13px;flex:1;padding:9px;border-radius:9px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2);cursor:pointer}
@@ -93,18 +94,8 @@
     <label for="owners">Beneficial owners (one per line — name, country)</label>
     <textarea id="owners" placeholder="Jane Smith, GB&#10;John Doe, US"></textarea>
 
-    <label>Documents you are providing</label>
-    <div class="docs" id="docs">
-      <label class="doc"><input type="checkbox" value="certificate_of_incorporation">Certificate of incorporation</label>
-      <label class="doc"><input type="checkbox" value="proof_of_registered_address">Proof of registered business address</label>
-      <label class="doc"><input type="checkbox" value="source_of_funds_declaration">Source-of-funds declaration</label>
-      <label class="doc"><input type="checkbox" value="beneficial_ownership_evidence">Beneficial ownership documentation</label>
-    </div>
-
-    <label for="doctext">Paste key document text (optional)</label>
-    <textarea id="doctext" placeholder="Paste relevant agreement or incorporation text for faster processing"></textarea>
-
     <button class="pri" id="submitBtn" type="submit">Submit application</button>
+    <div class="meta" style="margin-top:10px">After submitting you will be asked to upload the required documents in the next step.</div>
     <div class="error" id="error"></div>
   </form>
 
@@ -112,13 +103,15 @@
   <div class="card" id="statusCard" style="display:none">
     <h1 style="font-size:18px" id="stTitle">Application status</h1>
     <div class="steps" id="steps">
-      <div class="step" data-s="received"><div class="dot">1</div>Received</div>
-      <div class="step" data-s="screening"><div class="dot">2</div>Screening</div>
-      <div class="step" data-s="review"><div class="dot">3</div>Review</div>
-      <div class="step" data-s="decision"><div class="dot">4</div>Decision</div>
+      <div class="step" data-s="received"><div class="dot">1</div><span class="lb">Received</span></div>
+      <div class="step" data-s="screening"><div class="dot">2</div><span class="lb">Screening</span></div>
+      <div class="step" data-s="review"><div class="dot">3</div><span class="lb">Review</span></div>
+      <div class="step" data-s="decision"><div class="dot">4</div><span class="lb">Decision</span></div>
     </div>
     <div class="status-msg" id="stMsg"></div>
     <ul class="outstanding" id="stDocs"></ul>
+    <button class="upl" id="uploadBtn" type="button">Submit documents</button>
+    <div class="error" id="uplError"></div>
     <div class="meta" id="stMeta"></div>
     <div class="rowbtns">
       <button class="btn" id="refreshBtn" type="button">↻ Check status</button>
@@ -156,16 +149,30 @@
       el.classList.toggle("now", i === idx && idx < 3);
       if (i === 3 && idx === 3) el.querySelector(".dot").textContent = view.status === "approved" ? "✓" : "✕";
     });
+    // Stage 2 is "Screening" once the file is complete, but while we are
+    // waiting on the client it is really the documents stage — label it so.
+    document.querySelector('.step[data-s="screening"] .lb').textContent =
+      view.status === "additional_documents_needed" ? "Documents" : "Screening";
     const msg = document.getElementById("stMsg");
     msg.className = "status-msg " + view.status;
     msg.textContent = view.message;
     const docs = document.getElementById("stDocs");
     docs.textContent = "";
-    (view.outstandingDocuments || []).forEach((d) => {
+    const outstanding = view.outstandingDocuments || [];
+    outstanding.forEach((d) => {
       const li = document.createElement("li");
-      li.textContent = d;
+      const label = document.createElement("span");
+      label.className = "doclabel";
+      label.textContent = d.label || d;
+      const input = document.createElement("input");
+      input.type = "file";
+      input.dataset.doc = d.key || "";
+      li.appendChild(label);
+      li.appendChild(input);
       docs.appendChild(li);
     });
+    document.getElementById("uploadBtn").style.display = outstanding.length ? "block" : "none";
+    document.getElementById("uplError").style.display = "none";
     document.getElementById("stMeta").textContent =
       "Submitted " + new Date(view.submittedAt).toLocaleString() + " · " + view.product;
   }
@@ -194,8 +201,9 @@
         const [name, country] = line.split(",").map((s) => s.trim());
         return { name: name, country: country || "" };
       });
-    const docs = Array.from(document.querySelectorAll("#docs input:checked")).map((el) => el.value);
     try {
+      // Step 1 registers the application; documents are uploaded in step 2
+      // (the status screen), so screening reflects what was actually filed.
       const response = await fetch("/api/client/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -204,8 +212,7 @@
           jurisdiction: document.getElementById("jurisdiction").value,
           product: document.getElementById("product").value,
           beneficialOwners: owners,
-          documentsProvided: docs,
-          documentText: document.getElementById("doctext").value.trim() || null,
+          documentsProvided: [],
         }),
       });
       const data = await response.json();
@@ -220,6 +227,42 @@
       errorEl.style.display = "block";
     } finally {
       submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById("uploadBtn").addEventListener("click", async () => {
+    const btn = document.getElementById("uploadBtn");
+    const errEl = document.getElementById("uplError");
+    errEl.style.display = "none";
+    const token = sessionStorage.getItem(K_TOKEN);
+    const appId = sessionStorage.getItem(K_APP);
+    const inputs = Array.from(document.querySelectorAll("#stDocs input[type=file]"))
+      .filter((el) => el.files && el.files.length);
+    if (!inputs.length) {
+      errEl.textContent = "Choose at least one file to submit.";
+      errEl.style.display = "block";
+      return;
+    }
+    const data = new FormData();
+    inputs.forEach((el) => {
+      data.append("files", el.files[0]);
+      data.append("docTypes", el.dataset.doc);
+    });
+    btn.disabled = true;
+    try {
+      const response = await fetch("/api/client/documents/" + appId, {
+        method: "POST",
+        headers: token ? { Authorization: "Bearer " + token } : {},
+        body: data,
+      });
+      const view = await response.json();
+      if (!response.ok) throw new Error(view.detail || "Upload failed");
+      renderStatus(view);
+    } catch (err) {
+      errEl.textContent = String(err.message || err);
+      errEl.style.display = "block";
+    } finally {
+      btn.disabled = false;
     }
   });
 

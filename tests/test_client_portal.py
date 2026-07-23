@@ -100,6 +100,71 @@ def test_client_role_permissions_are_narrow():
     assert perms == {rbac.PERM_APPLICATION_SUBMIT, rbac.PERM_APPLICATION_STATUS}
 
 
+# --------------------------------------------------------- document follow-up
+def test_uploading_missing_documents_advances_the_application():
+    view = _apply(company="Paper Trail Ltd", documentsProvided=["certificate_of_incorporation"])
+    assert view["status"] == "additional_documents_needed"
+    missing_keys = [d["key"] for d in view["outstandingDocuments"]]
+    assert len(missing_keys) == 3
+
+    headers = {"Authorization": f"Bearer {view['accessToken']}"}
+    files = [("files", (f"{key}.txt", f"Evidence for {key}".encode(), "text/plain")) for key in missing_keys]
+    response = client.post(
+        f"/api/client/documents/{view['applicationId']}",
+        files=files,
+        data={"docTypes": missing_keys},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+    updated = response.json()
+    assert updated["outstandingDocuments"] == []
+    # Maker-checker: even a clean, complete application awaits a human —
+    # never instant approval.
+    assert updated["status"] == "under_review"
+    assert "working days" in updated["message"]
+    assert not (_INTERNAL_KEYS & set(updated))
+
+    # The final-approval task is in the review queue; a human approves it.
+    from app.services import applications
+
+    record = applications.get_application(view["applicationId"])
+    review_id = record["internal"]["review_task_id"]
+    assert review_id and review_id.startswith("REV-ONB-")
+    staff = issue_token("onb.approver", ["risk_manager"])
+    resolved = client.post(
+        f"/api/reviews/{review_id}/resolve",
+        json={"decision": "approve", "reviewer": "onb.approver"},
+        headers={"Authorization": f"Bearer {staff}"},
+    )
+    assert resolved.status_code == 200
+    final = client.get(f"/api/client/status/{view['applicationId']}", headers=headers).json()
+    assert final["status"] == "approved"
+
+
+def test_document_upload_is_ownership_scoped():
+    view = _apply(company="Mine Only Ltd", documentsProvided=[])
+    other = issue_token("client:Rival", ["client"], extra_claims={"client_id": "CLIENT-RIVAL"})
+    response = client.post(
+        f"/api/client/documents/{view['applicationId']}",
+        files=[("files", ("proof.txt", b"address proof", "text/plain"))],
+        data={"docTypes": ["proof_of_registered_address"]},
+        headers={"Authorization": f"Bearer {other}"},
+    )
+    assert response.status_code == 403
+
+
+def test_unknown_document_type_rejected():
+    view = _apply(company="Odd Docs Ltd", documentsProvided=[])
+    headers = {"Authorization": f"Bearer {view['accessToken']}"}
+    response = client.post(
+        f"/api/client/documents/{view['applicationId']}",
+        files=[("files", ("x.txt", b"content", "text/plain"))],
+        data={"docTypes": ["passport_selfie"]},
+        headers=headers,
+    )
+    assert response.status_code == 422
+
+
 # -------------------------------------------------- review resolution updates
 def test_review_resolution_flows_through_to_client_status():
     view = _apply(
