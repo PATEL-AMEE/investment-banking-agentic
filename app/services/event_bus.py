@@ -32,6 +32,7 @@ TOPIC_CLIENT_ONBOARDED = "clients.onboarded"
 TOPIC_COMPLIANCE_DECISION = "compliance.decisions"
 TOPIC_REVIEW_ESCALATED = "reviews.escalated"
 TOPIC_REVIEW_RESOLVED = "reviews.resolved"
+TOPIC_SUPERVISOR_ROUTED = "agents.supervisor.routed"
 
 
 def _make_event(topic: str, payload: Dict[str, Any]) -> Dict[str, Any]:

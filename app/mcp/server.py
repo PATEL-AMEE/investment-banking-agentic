@@ -120,6 +120,21 @@ class MCPServer:
             },
             self._tool_copilot_query,
         )
+        self.register_tool(
+            "supervisor_ask",
+            "Supervisor agent: classifies a natural-language request, routes it to the specialised worker agents (compliance, sanctions, profiling, NLP, copilot) over MCP, and aggregates their outputs into one answer.",
+            {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string"},
+                    "client_id": {"type": "string"},
+                    "client_name": {"type": "string"},
+                    "text": {"type": "string"},
+                },
+                "required": ["query"],
+            },
+            self._tool_supervisor_ask,
+        )
 
     # ------------------------------------------------------------ tool bodies
     def _tool_compliance_inspect(self, client_id: str, tx_data: Optional[Dict[str, Any]] = None, request_id: str = "mcp-req") -> Dict[str, Any]:
@@ -165,6 +180,27 @@ class MCPServer:
         from app.agents.copilot import run_copilot
 
         return run_copilot(query, self.store)
+
+    def _tool_supervisor_ask(
+        self,
+        query: str,
+        client_id: Optional[str] = None,
+        client_name: Optional[str] = None,
+        text: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        from app.agents.supervisor import run_supervisor
+
+        # MCP callers already cleared RBAC at the transport layer
+        # (require_llm_access on POST /api/mcp), so the supervisor's own
+        # per-intent check runs in trusted-caller mode here.
+        return run_supervisor(
+            query,
+            self.store,
+            user_id="mcp-client",
+            client_id=client_id,
+            client_name=client_name,
+            text=text,
+        )
 
     # ---------------------------------------------------------------- JSON-RPC
     def handle(self, request: Dict[str, Any], actor_id: str = "mcp-client") -> Optional[Dict[str, Any]]:

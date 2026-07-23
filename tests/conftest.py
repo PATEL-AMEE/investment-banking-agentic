@@ -12,3 +12,8 @@ os.environ["LLM_MODE"] = "mock"
 # rule-based/regex paths so results don't depend on ML model downloads.
 os.environ["NLP_ENGINE"] = "rule-based"
 os.environ["DLP_ENGINE"] = "regex"
+
+# Force the local in-memory vector store: a configured Azure AI Search
+# endpoint in .env must never make the suite hit the network.
+os.environ["AZURE_SEARCH_ENDPOINT"] = ""
+os.environ["AZURE_SEARCH_KEY"] = ""

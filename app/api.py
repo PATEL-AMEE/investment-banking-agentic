@@ -28,6 +28,7 @@ from app.services.local_auth import auth_required, issue_token, validate_local_t
 from app.agents.document_analysis import run_document_analysis
 from app.agents.client_profiling import run_client_profiling
 from app.agents.copilot import run_copilot
+from app.agents.supervisor import run_supervisor
 
 app = FastAPI(title="Investment Banking Agentic AI Platform")
 BASE_DIR = Path(__file__).resolve().parent
@@ -304,6 +305,42 @@ def upload_document(file: UploadFile = File(...), metadata: Optional[str] = Form
 @app.post("/api/copilot/query")
 def copilot_query(payload: Dict[str, Any], current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
     return run_copilot(payload.get("query", ""), store)
+
+
+class AskRequest(BaseModel):
+    query: str
+    clientId: Optional[str] = None
+    clientName: Optional[str] = None
+    jurisdiction: str = "GB"
+    text: Optional[str] = None
+    requestId: Optional[str] = None
+
+
+@app.post("/api/agents/ask")
+def agents_ask(req: AskRequest, current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+    """Supervisor agent: one NL entry point routed across the worker agents.
+
+    Classifies the request, enforces per-intent RBAC centrally, dispatches
+    the surviving intents to the specialised agents over audited MCP
+    ``tools/call`` hops, and aggregates their outputs into one answer.
+    """
+    # Anonymous dev callers bypass the supervisor's per-intent RBAC (roles=None),
+    # matching how the rest of the API treats unauthenticated local use.
+    roles = None if _is_anonymous_dev(current_user) else list(current_user.get("roles") or [])
+    result = run_supervisor(
+        req.query,
+        store,
+        user_id=str(current_user.get("sub", "user-unknown")),
+        roles=roles,
+        client_id=req.clientId,
+        client_name=req.clientName,
+        jurisdiction=req.jurisdiction,
+        text=req.text,
+        request_id=req.requestId,
+    )
+    if result.get("all_denied"):
+        raise HTTPException(status_code=403, detail="insufficient role for every routed agent: " + ", ".join(result.get("denied", [])))
+    return result
 
 
 class NLPAnalyzeRequest(BaseModel):

@@ -6,22 +6,43 @@ semantic similarity and enriches each hit with its graph relationships —
 which clients/documents a piece of evidence belongs to, which
 policy/regulation a chunk cites. This replaces the old keyword substring
 match behind the ``policy_search`` tool.
+
+Vector backend: Azure AI Search (hybrid BM25 + vector) when
+``AZURE_SEARCH_ENDPOINT``/``AZURE_SEARCH_KEY`` are configured; the local
+in-memory store otherwise, and as the fallback when the service is down.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List
 
 from app.services.vector_store import InMemoryVectorStore
+
+logger = logging.getLogger("retrieval")
 
 _FALLBACK = [
     {"source_id": "POL-AML-01", "excerpt": "Enhanced customer due diligence is required for high-risk profiles."}
 ]
 
 
+def _new_vector_store() -> Any:
+    """Azure AI Search when configured; local in-memory store otherwise."""
+    from app.services.azure_search_store import AzureSearchVectorStore, azure_search_configured
+
+    if azure_search_configured():
+        try:
+            store = AzureSearchVectorStore()
+            logger.info("retrieval: Azure AI Search backend (index=%s)", store.index)
+            return store
+        except Exception:
+            logger.exception("Azure AI Search unavailable; falling back to in-memory vector store")
+    return InMemoryVectorStore()
+
+
 class GraphRAGRetriever:
     def __init__(self, store: Any) -> None:
         self.store = store
-        self.vector_store = InMemoryVectorStore()
+        self.vector_store = _new_vector_store()
         self._indexed_node_count = -1
 
     # ------------------------------------------------------------------ index
@@ -39,7 +60,7 @@ class GraphRAGRetriever:
                     )
             except Exception:
                 items = []
-            self.vector_store = InMemoryVectorStore()
+            self.vector_store = _new_vector_store()
             self.vector_store.add_batch(items)
             self._indexed_node_count = len(items)
             return len(items)
@@ -55,7 +76,7 @@ class GraphRAGRetriever:
                 text = node.get("excerpt") or ""
                 if source_id and text:
                     items.append((source_id, text, {"label": label, "node": node}))
-        self.vector_store = InMemoryVectorStore()
+        self.vector_store = _new_vector_store()
         self.vector_store.add_batch(items)
         self._indexed_node_count = len(nodes)
         return len(items)

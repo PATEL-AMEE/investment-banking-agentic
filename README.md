@@ -11,11 +11,18 @@ observability, and end-to-end security controls across all LLM endpoints.
 
 - **LangGraph agents** — compliance, onboarding/KYC, copilot, document
   analysis, client profiling (`app/agents/`).
+- **Supervisor agent** — single NL entry point (`POST /api/agents/ask`):
+  classifies intent, enforces per-intent RBAC centrally, fans requests out
+  to the worker agents in parallel over audited MCP `tools/call` hops, and
+  aggregates their outputs into one answer (`app/agents/supervisor.py`).
 - **MCP inter-agent protocol** — agents exposed as JSON-RPC 2.0 tools
   (`app/mcp/`); inter-agent calls run through audited `tools/call`;
   external MCP hosts connect at `POST /api/mcp`.
 - **GraphRAG** — Neo4j knowledge graph + vector retrieval with graph
-  enrichment (`app/services/retrieval.py`).
+  enrichment (`app/services/retrieval.py`); vector backend is **Azure AI
+  Search** (hybrid BM25 + vector, `app/services/azure_search_store.py`)
+  when `AZURE_SEARCH_ENDPOINT`/`AZURE_SEARCH_KEY` are set, with automatic
+  fallback to the local in-memory store.
 - **NLP pipeline** — NER, contract clause extraction, regulatory document
   classification (`app/services/nlp_pipeline.py`; rule-based by default,
   spaCy / HF Transformers via `requirements-ml.txt`).
@@ -35,6 +42,7 @@ observability, and end-to-end security controls across all LLM endpoints.
 
 | Endpoint | Purpose |
 |---|---|
+| `POST /api/agents/ask` | Supervisor agent: route + aggregate across all worker agents |
 | `POST /api/agents/inspect` | Compliance decision workflow |
 | `POST /api/agents/onboarding/kyc` | KYC/AML onboarding (sanctions + PEP screening) |
 | `POST /api/documents/upload` | Document ingestion + NLP enrichment |

@@ -16,3 +16,7 @@ data:
   NLP_ENGINE: "rule-based"
   DLP_ENGINE: "regex"
   KAFKA_BOOTSTRAP_SERVERS: ""
+  # Vector retrieval backend: set the endpoint (and AZURE_SEARCH_KEY in the
+  # Secret) to use Azure AI Search hybrid retrieval; empty = in-memory store.
+  AZURE_SEARCH_ENDPOINT: ""
+  AZURE_SEARCH_INDEX: "policy-corpus"
