@@ -51,6 +51,7 @@ observability, and end-to-end security controls across all LLM endpoints.
 | `POST /api/mcp` · `GET /api/mcp/tools` | MCP JSON-RPC endpoint + tool catalogue |
 | `POST /api/eval/run` | RAG evaluation report |
 | `GET /api/audit/logs` · `GET /api/audit/verify` | Signed audit trail + chain verification |
+| `GET /chat` | Copilot chat UI (talks to the supervisor agent) |
 | `GET /dashboard` · `GET /docs` | Live dashboard · OpenAPI docs |
 
 ## Run locally

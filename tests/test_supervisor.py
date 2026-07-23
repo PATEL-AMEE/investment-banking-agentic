@@ -122,6 +122,13 @@ def test_ask_endpoint_403_when_all_intents_denied():
     assert response.status_code == 403
 
 
+def test_chat_ui_is_served():
+    response = client.get("/chat")
+    assert response.status_code == 200
+    assert "Copilot Chat" in response.text
+    assert "/api/agents/ask" in response.text
+
+
 def test_supervisor_exposed_as_mcp_tool():
     server = MCPServer(store)
     assert "supervisor_ask" in server.tool_names()

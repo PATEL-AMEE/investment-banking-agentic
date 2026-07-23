@@ -519,6 +519,15 @@ def dashboard_page() -> FileResponse:
     return FileResponse(index_path)
 
 
+@app.get("/chat")
+def chat_page() -> FileResponse:
+    """Serve the supervisor copilot chat UI."""
+    index_path = BASE_DIR / "static" / "chat" / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Chat UI not available")
+    return FileResponse(index_path)
+
+
 @app.get("/overview")
 def overview_page() -> FileResponse:
     """Serve the projected analytics/overview dashboard (design-target figures)."""
