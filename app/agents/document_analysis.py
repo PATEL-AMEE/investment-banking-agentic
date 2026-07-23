@@ -1,10 +1,12 @@
 """Document-analysis agent — a LangGraph ``StateGraph``.
 
-classify_document → extract_metadata → persist_document
+classify_document → extract_metadata → nlp_enrich → persist_document
 
 Wraps the ingestion service in an agent workflow: classifies the file,
-enriches its metadata with detected compliance tags, then persists the
-document node (with content hash) into the knowledge graph.
+enriches its metadata with detected compliance tags, runs the NLP pipeline
+(NER, contract clause extraction, regulatory classification — see
+:mod:`app.services.nlp_pipeline`), then persists the document node (with
+content hash) into the knowledge graph.
 """
 from __future__ import annotations
 
@@ -45,6 +47,7 @@ class DocumentState(TypedDict, total=False):
     # intermediate
     doc_type: str
     tags: List[str]
+    nlp: Dict[str, Any]
     # output
     result: Dict[str, Any]
 
@@ -66,11 +69,34 @@ def _extract_metadata(state: DocumentState) -> Dict[str, Any]:
     return {"tags": tags}
 
 
+def _nlp_enrich(state: DocumentState) -> Dict[str, Any]:
+    """NER + clause extraction + regulatory classification over the text."""
+    from app.services.ingestion import extract_text
+    from app.services.nlp_pipeline import analyze
+
+    text = extract_text(state["file_path"])[:20000]
+    if not text:
+        return {"nlp": {}}
+    analysis = analyze(text)
+    return {
+        "nlp": {
+            "engine": analysis["engine"],
+            "classification": analysis["classification"],
+            "entity_count": len(analysis["entities"]),
+            "entities": analysis["entities"][:25],
+            "clauses": analysis["clauses"],
+        }
+    }
+
+
 def _persist_document(state: DocumentState) -> Dict[str, Any]:
     metadata = dict(state.get("metadata") or {})
     metadata.setdefault("doc_type", state["doc_type"])
     if state["tags"]:
         metadata.setdefault("tags", state["tags"])
+    nlp = state.get("nlp") or {}
+    if nlp.get("classification"):
+        metadata.setdefault("nlp_category", nlp["classification"]["category"])
     document = ingest_document(state["file_path"], metadata=metadata, store=state["store"])
     event_bus.publish(
         TOPIC_DOCUMENT_INGESTED,
@@ -83,18 +109,20 @@ def _persist_document(state: DocumentState) -> Dict[str, Any]:
             "actor": "AGENT_DOCANALYSIS_001",
         },
     )
-    return {"result": {**document, "doc_type": state["doc_type"], "tags": state["tags"]}}
+    return {"result": {**document, "doc_type": state["doc_type"], "tags": state["tags"], "nlp": nlp}}
 
 
 def build_document_agent():
     graph = StateGraph(DocumentState)
     graph.add_node("classify_document", _classify_document)
     graph.add_node("extract_metadata", _extract_metadata)
+    graph.add_node("nlp_enrich", _nlp_enrich)
     graph.add_node("persist_document", _persist_document)
 
     graph.add_edge(START, "classify_document")
     graph.add_edge("classify_document", "extract_metadata")
-    graph.add_edge("extract_metadata", "persist_document")
+    graph.add_edge("extract_metadata", "nlp_enrich")
+    graph.add_edge("nlp_enrich", "persist_document")
     graph.add_edge("persist_document", END)
     return graph.compile()
 

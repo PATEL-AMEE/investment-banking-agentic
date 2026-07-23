@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
 import itertools
 import json
 import os
@@ -9,6 +10,16 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 _GENESIS_HASH = "0" * 64
+
+
+def _signing_key() -> bytes:
+    """HMAC key for entry signatures (set ``AUDIT_SIGNING_KEY`` in prod —
+    ideally sourced from Azure Key Vault; the default is dev-only)."""
+    return os.getenv("AUDIT_SIGNING_KEY", "dev-only-audit-signing-key").encode("utf-8")
+
+
+def _sign(entry_hash: str) -> str:
+    return hmac.new(_signing_key(), entry_hash.encode("utf-8"), hashlib.sha256).hexdigest()
 
 
 def _canonical(event: Dict[str, Any]) -> str:
@@ -21,10 +32,13 @@ class AuditLog:
 
     Every event carries ``prev_hash`` and ``entry_hash`` forming a SHA-256
     hash chain: mutating or deleting any historical event breaks every hash
-    after it, which ``verify_chain`` detects. With a ``path`` the chain is
-    also persisted as append-only JSONL and reloaded on startup, so events
-    survive restarts. (A production deployment would additionally forward to
-    WORM storage — Azure Blob object-lock / Event Hubs.)
+    after it, which ``verify_chain`` detects. Each entry is additionally
+    HMAC-SHA256 **signed** over its ``entry_hash`` with ``AUDIT_SIGNING_KEY``,
+    so an attacker who can rewrite the whole file still cannot forge a valid
+    trail without the key. With a ``path`` the chain is also persisted as
+    append-only JSONL and reloaded on startup, so events survive restarts.
+    (A production deployment would additionally forward to WORM storage —
+    Azure Blob object-lock / Event Hubs.)
     """
 
     def __init__(self, path: str | Path | None = None) -> None:
@@ -101,6 +115,7 @@ class AuditLog:
             "prev_hash": prev_hash,
         }
         event["entry_hash"] = hashlib.sha256((prev_hash + _canonical({k: v for k, v in event.items() if k != "prev_hash"})).encode("utf-8")).hexdigest()
+        event["signature"] = _sign(event["entry_hash"])
         self._events.append(event)
         self._append_to_disk(event)
         return event
@@ -112,16 +127,24 @@ class AuditLog:
         return [event for event in self._events if event.get("request_id") == request_id]
 
     def verify_chain(self) -> Dict[str, Any]:
-        """Recompute the hash chain; report the first tampered entry, if any."""
+        """Recompute the hash chain and HMAC signatures; report the first
+        tampered entry, if any. Events written before signing was introduced
+        (no ``signature`` field) still verify via the hash chain alone."""
         prev_hash = _GENESIS_HASH
+        signed = 0
         for event in self._events:
             if event.get("prev_hash") != prev_hash:
-                return {"valid": False, "count": len(self._events), "first_invalid": event.get("log_id")}
-            expected = hashlib.sha256((prev_hash + _canonical({k: v for k, v in event.items() if k not in ("prev_hash", "entry_hash")})).encode("utf-8")).hexdigest()
+                return {"valid": False, "count": len(self._events), "first_invalid": event.get("log_id"), "signed": signed}
+            expected = hashlib.sha256((prev_hash + _canonical({k: v for k, v in event.items() if k not in ("prev_hash", "entry_hash", "signature")})).encode("utf-8")).hexdigest()
             if event.get("entry_hash") != expected:
-                return {"valid": False, "count": len(self._events), "first_invalid": event.get("log_id")}
+                return {"valid": False, "count": len(self._events), "first_invalid": event.get("log_id"), "signed": signed}
+            signature = event.get("signature")
+            if signature is not None:
+                if not hmac.compare_digest(signature, _sign(event["entry_hash"])):
+                    return {"valid": False, "count": len(self._events), "first_invalid": event.get("log_id"), "signed": signed}
+                signed += 1
             prev_hash = event["entry_hash"]
-        return {"valid": True, "count": len(self._events), "first_invalid": None}
+        return {"valid": True, "count": len(self._events), "first_invalid": None, "signed": signed}
 
 
 # Shared process-wide audit trail used by the API layer. Persistent and

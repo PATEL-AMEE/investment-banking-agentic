@@ -1,0 +1,70 @@
+name: CI/CD — test, build, deploy to Azure
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    branches: [master, main]
+
+env:
+  ACR_NAME: acrinvestmentbanking
+  IMAGE_NAME: investment-banking-agentic-api
+  RESOURCE_GROUP: rg-investment-banking-agentic
+  CONTAINER_APP: ca-investment-banking
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run test suite
+        run: pytest tests -q
+        env:
+          LLM_MODE: mock
+
+  deploy:
+    # Deploy only on pushes to the default branch, never on PRs.
+    if: github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # Free-trial subscriptions can't use ACR Tasks, so build on the
+      # runner and push (same approach as LOCAL_BUILD=true locally).
+      - name: Build and push image
+        run: |
+          az acr login --name $ACR_NAME
+          IMAGE_REF=$ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+          docker build -t "$IMAGE_REF" .
+          docker push "$IMAGE_REF"
+
+      - name: Roll out to Container Apps
+        run: |
+          az extension add --name containerapp --upgrade
+          az containerapp update \
+            --name $CONTAINER_APP \
+            --resource-group $RESOURCE_GROUP \
+            --image $ACR_NAME.azurecr.io/$IMAGE_NAME:${{ github.sha }}
+
+      - name: Smoke test public URL
+        run: |
+          FQDN=$(az containerapp show -n $CONTAINER_APP -g $RESOURCE_GROUP \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          for i in $(seq 1 10); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" -m 30 "https://$FQDN/health")
+            [ "$code" = "200" ] && echo "healthy" && exit 0
+            sleep 10
+          done
+          echo "smoke test failed" && exit 1

@@ -63,6 +63,14 @@ def test_extract_text_reads_plain_text(tmp_path: Path):
 
 
 # ------------------------------------------------------------------- sanctions
+# The OFAC snapshot is a local runtime download (data/sanctions/ is
+# gitignored); skip list-dependent tests where it is absent, e.g. in CI.
+import pytest
+
+requires_sdn = pytest.mark.skipif(not SDN_PATH.exists(), reason="OFAC SDN list not downloaded (scripts/update_sanctions.py)")
+
+
+@requires_sdn
 def test_ofac_sdn_list_is_loaded_and_matches_real_entry():
     assert SDN_PATH.exists(), "run scripts/update_sanctions.py to download the OFAC SDN list"
     with SDN_PATH.open(newline="", encoding="utf-8", errors="ignore") as handle:
@@ -73,6 +81,7 @@ def test_ofac_sdn_list_is_loaded_and_matches_real_entry():
     assert result["screened_against"] == "OFAC-SDN+local"
 
 
+@requires_sdn
 def test_fuzzy_match_catches_spelling_variant():
     with SDN_PATH.open(newline="", encoding="utf-8", errors="ignore") as handle:
         long_name = next(

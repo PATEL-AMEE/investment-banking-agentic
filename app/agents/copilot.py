@@ -5,8 +5,9 @@ guard_input → retrieve_citations → generate_answer
 
 Grounded policy Q&A: queries pass DLP guardrails (prompt-injection screening
 + PII masking), then citations are retrieved from the policy/regulation
-corpus via the ``policy_search`` tool and an answer is composed. The
-generation node is the Azure OpenAI integration point (Phase 4).
+corpus via the MCP ``policy_search`` tool (inter-agent ``tools/call``, so
+the retrieval hop is schema-validated and audited) and an answer is
+composed. The generation node is the Azure OpenAI integration point.
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from typing import Any, Dict, List, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from app.agents.base import default_registry
+from app.mcp.client import MCPClient
 from app.services.dlp import guard_prompt
 from app.services.llm_adapter import LLMAdapter
 
@@ -55,7 +56,10 @@ def _refuse(state: CopilotState) -> Dict[str, Any]:
 
 
 def _retrieve_citations(state: CopilotState) -> Dict[str, Any]:
-    citations = default_registry.call("policy_search", store=state["store"], query=state["query"])
+    # Inter-agent hop over MCP: the copilot asks the retrieval capability for
+    # citations via tools/call instead of importing the retriever directly.
+    client = MCPClient("AGENT_COPILOT_001", store=state["store"])
+    citations = client.call_tool("policy_search", {"query": state["query"]})
     return {"citations": citations}
 
 

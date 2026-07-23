@@ -95,22 +95,39 @@ def get_current_user(authorization: str | None = Header(default=None)) -> dict:
     return {"sub": "local-user", "name": "local-user", "roles": []}
 
 
+def _is_anonymous_dev(current_user: dict) -> bool:
+    return (
+        not azure_ad_settings.get("enable_azure_ad")
+        and not auth_required()
+        and current_user.get("sub") == "local-user"
+    )
+
+
 def require_reviewer_role(current_user: dict = Depends(get_current_user)) -> dict:
     """Require the reviewer role.
 
     Enforced whenever the caller presents claims (Azure AD or local JWT) or
     REQUIRE_AUTH is on; the no-op path only remains for anonymous dev access.
     """
-    anonymous_dev = (
-        not azure_ad_settings.get("enable_azure_ad")
-        and not auth_required()
-        and current_user.get("sub") == "local-user"
-    )
-    if anonymous_dev:
+    if _is_anonymous_dev(current_user):
         return current_user
     if user_has_role(current_user, "reviewer") or user_has_role(current_user, "Compliance.Reviewer"):
         return current_user
     raise HTTPException(status_code=403, detail="insufficient role: reviewer required")
+
+
+# Roles allowed to reach LLM-backed endpoints (copilot, MCP, NLP). RBAC for
+# LLM endpoints: authenticated callers must hold an analyst/reviewer role;
+# the no-op path only remains for anonymous dev access.
+_LLM_ROLES = ("analyst", "reviewer", "Copilot.Analyst", "Compliance.Reviewer")
+
+
+def require_llm_access(current_user: dict = Depends(get_current_user)) -> dict:
+    if _is_anonymous_dev(current_user):
+        return current_user
+    if any(user_has_role(current_user, role) for role in _LLM_ROLES):
+        return current_user
+    raise HTTPException(status_code=403, detail="insufficient role: analyst or reviewer required for LLM endpoints")
 
 
 class TokenRequest(BaseModel):
@@ -150,6 +167,7 @@ class UploadResponse(BaseModel):
     status: str
     sha256: str
     metadata: Dict[str, Any]
+    nlp: Dict[str, Any] = {}
 
 
 class KYCRequest(BaseModel):
@@ -284,8 +302,66 @@ def upload_document(file: UploadFile = File(...), metadata: Optional[str] = Form
 
 
 @app.post("/api/copilot/query")
-def copilot_query(payload: Dict[str, Any], current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def copilot_query(payload: Dict[str, Any], current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
     return run_copilot(payload.get("query", ""), store)
+
+
+class NLPAnalyzeRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/nlp/analyze")
+def nlp_analyze(payload: NLPAnalyzeRequest, current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+    """NLP pipeline: NER, contract clause extraction, document classification."""
+    from app.services.nlp_pipeline import analyze
+
+    return analyze(payload.text)
+
+
+@app.post("/api/mcp")
+def mcp_endpoint(request: Dict[str, Any], current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+    """MCP JSON-RPC 2.0 endpoint (initialize, tools/list, tools/call).
+
+    Inter-agent and external-host access to the platform's agents as MCP
+    tools; every tools/call lands on the signed audit trail.
+    """
+    from app.mcp.server import get_mcp_server
+
+    response = get_mcp_server(store).handle(request, actor_id=str(current_user.get("sub", "mcp-client")))
+    return response if response is not None else {}
+
+
+@app.post("/api/eval/run")
+def run_eval(current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+    """Run the RAGAS-style evaluation harness over the golden Q&A dataset.
+
+    Scores faithfulness, hallucination rate, answer relevancy, and context
+    precision/recall across the copilot RAG chain on the live store.
+    """
+    from app.eval.harness import load_golden_dataset, run_evaluation
+
+    try:
+        dataset = load_golden_dataset(BASE_DIR.parent / "data" / "eval" / "golden_qa.json")
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="golden dataset not found") from exc
+    report = run_evaluation(dataset, store)
+    audit_log.record(
+        event_type="rag_evaluation",
+        actor_id=str(current_user.get("sub", "local-user")),
+        action="run_evaluation",
+        metadata={"case_count": report["case_count"], **report["aggregate"]},
+    )
+    return report
+
+
+@app.get("/api/mcp/tools")
+def mcp_tools(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+    """Convenience listing of the MCP tool catalogue (same data as tools/list)."""
+    from app.mcp.server import get_mcp_server
+
+    server = get_mcp_server(store)
+    response = server.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/list"})
+    return {"count": len(server.tool_names()), "tools": response["result"]["tools"]}
 
 
 @app.get("/api/agents/profile/{client_id}")

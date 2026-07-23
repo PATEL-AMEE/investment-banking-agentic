@@ -1,0 +1,38 @@
+[
+  {
+    "case_id": "EVAL-001",
+    "question": "What is required for high-risk clients under enhanced due diligence?",
+    "expected_sources": ["POL-AML-01"],
+    "reference": "Enhanced due diligence is required for high-risk clients."
+  },
+  {
+    "case_id": "EVAL-002",
+    "question": "How quickly must suspicious activity be reported?",
+    "expected_sources": ["POL-AML-02", "POL-STR-01"],
+    "reference": "Suspicious activity must be reported within 24 hours."
+  },
+  {
+    "case_id": "EVAL-003",
+    "question": "What screening is mandatory for counterparties?",
+    "expected_sources": ["POL-SAN-01"],
+    "reference": "Sanctions screening is mandatory for all counterparties."
+  },
+  {
+    "case_id": "EVAL-004",
+    "question": "What review is required for politically exposed persons?",
+    "expected_sources": ["POL-PEP-01"],
+    "reference": "Politically exposed persons require enhanced review."
+  },
+  {
+    "case_id": "EVAL-005",
+    "question": "What approval is needed for cross-border wire transfers?",
+    "expected_sources": ["POL-WIR-01"],
+    "reference": "Cross-border wire transfers require secondary approval."
+  },
+  {
+    "case_id": "EVAL-006",
+    "question": "What verification applies to beneficial ownership of corporate clients?",
+    "expected_sources": ["POL-BEN-01"],
+    "reference": "Beneficial ownership verification is required for corporate clients."
+  }
+]

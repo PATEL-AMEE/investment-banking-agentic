@@ -20,7 +20,7 @@ def test_audit_chain_valid_and_persisted(tmp_path: Path):
     log = AuditLog(path=log_path)
     log.record("test_event", "ACTOR", "act_one")
     log.record("test_event", "ACTOR", "act_two")
-    assert log.verify_chain() == {"valid": True, "count": 2, "first_invalid": None}
+    assert log.verify_chain() == {"valid": True, "count": 2, "first_invalid": None, "signed": 2}
     # Survives restart: a new instance reloads the chain and continues ids.
     reloaded = AuditLog(path=log_path)
     assert reloaded.verify_chain()["valid"] is True

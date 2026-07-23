@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agentic-api-config
+  namespace: agentic-platform
+data:
+  # Non-secret application settings. Secrets (API keys, passwords, signing
+  # keys) belong in the agentic-api-secrets Secret, ideally synced from
+  # Azure Key Vault via the CSI secrets-store driver.
+  ENABLE_AZURE_AD: "false"
+  REQUIRE_AUTH: "false"
+  NEO4J_USER: "neo4j"
+  LLM_MODEL: "openai/gpt-4o-mini"
+  AZURE_OPENAI_DEPLOYMENT: "gpt-4o-mini"
+  AZURE_OPENAI_API_VERSION: "2024-02-01"
+  NLP_ENGINE: "rule-based"
+  DLP_ENGINE: "regex"
+  KAFKA_BOOTSTRAP_SERVERS: ""

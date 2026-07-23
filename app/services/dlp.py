@@ -3,9 +3,18 @@
 Conservative by design — patterns are chosen to avoid mangling business text
 (amounts, client ids). Applied before text is indexed for retrieval, before
 copilot queries reach generation, and before audit metadata is persisted.
+
+Redaction engines:
+- **regex** (default) — deterministic, offline, dependency-free.
+- **presidio** — set ``DLP_ENGINE=presidio`` with Microsoft Presidio
+  installed (``pip install -r requirements-ml.txt``) for ML-driven PII
+  detection (names, locations, and locale-specific identifiers the regex
+  patterns don't cover). Any Presidio failure falls back to the regex path
+  so redaction never silently disappears.
 """
 from __future__ import annotations
 
+import os
 import re
 from typing import Any, Dict, List, Tuple
 
@@ -35,8 +44,60 @@ def _luhn_valid(number: str) -> bool:
     return checksum % 10 == 0
 
 
+# Presidio entity types -> the platform's placeholder labels.
+_PRESIDIO_LABELS = {
+    "EMAIL_ADDRESS": "EMAIL",
+    "PHONE_NUMBER": "PHONE",
+    "IBAN_CODE": "IBAN",
+    "CREDIT_CARD": "CARD",
+    "UK_NINO": "UK_NINO",
+    "PERSON": "PERSON",
+    "LOCATION": "LOCATION",
+    "US_SSN": "SSN",
+}
+
+_presidio_analyzer: Any = None
+_presidio_failed = False
+
+
+def _get_presidio_analyzer() -> Any:
+    """Presidio AnalyzerEngine when ``DLP_ENGINE=presidio``; else ``None``."""
+    global _presidio_analyzer, _presidio_failed
+    if os.getenv("DLP_ENGINE", "regex").lower() != "presidio" or _presidio_failed:
+        return None
+    if _presidio_analyzer is None:
+        try:
+            from presidio_analyzer import AnalyzerEngine
+
+            _presidio_analyzer = AnalyzerEngine()
+        except Exception:
+            _presidio_failed = True
+            return None
+    return _presidio_analyzer
+
+
+def _mask_pii_presidio(text: str, analyzer: Any) -> Tuple[str, List[str]]:
+    results = analyzer.analyze(text=text, language="en", entities=list(_PRESIDIO_LABELS))
+    found: List[str] = []
+    masked = text
+    # Replace right-to-left so earlier spans keep their offsets.
+    for result in sorted(results, key=lambda r: r.start, reverse=True):
+        label = _PRESIDIO_LABELS.get(result.entity_type, result.entity_type)
+        if label not in found:
+            found.append(label)
+        masked = masked[: result.start] + f"[{label}]" + masked[result.end :]
+    return masked, found
+
+
 def mask_pii(text: str) -> Tuple[str, List[str]]:
     """Replace PII with typed placeholders; return (masked_text, types_found)."""
+    analyzer = _get_presidio_analyzer()
+    if analyzer is not None:
+        try:
+            return _mask_pii_presidio(text, analyzer)
+        except Exception:
+            pass  # regex fallback below — redaction must never be skipped
+
     found: List[str] = []
     masked = text
     for pii_type, pattern in _PII_PATTERNS:

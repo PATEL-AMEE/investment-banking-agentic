@@ -1,86 +1,105 @@
 # Investment Banking Agentic AI Platform
 
-This project implements a production-like prototype for an investment banking agentic AI workflow using FastAPI, a LangGraph-inspired orchestration layer, a graph-style in-memory store, and Azure deployment assets.
+Enterprise Agentic AI platform for an investment banking division (see
+`Use_case.md`): LangGraph agents orchestrating regulatory compliance,
+client onboarding, and knowledge retrieval, communicating over **MCP**,
+grounded by **GraphRAG** (Neo4j + vector retrieval), deployed on **Azure
+Kubernetes Service** with Kafka event streaming, Azure Monitor
+observability, and end-to-end security controls across all LLM endpoints.
 
-## What is included
-- FastAPI backend with:
-  - POST /api/agents/inspect — compliance check workflow
-  - POST /api/agents/onboarding/kyc — KYC/AML onboarding agent (sanctions + PEP screening, risk scoring, escalation)
-  - POST /api/documents/upload
-  - POST /api/copilot/query — policy Q&A with retrieved citations
-  - GET /api/audit/logs — append-only audit trail (optionally filtered by request_id)
-  - GET /api/dashboard/summary — live aggregate (real client decisions, review queue, audit) for the dashboard
-  - GET /dashboard — live analytics dashboard UI (real output from the running app)
-  - GET /overview — overview dashboard UI (projected design-target figures)
-  - GET /health
-- Demo data loaded from the CSV files in the data directory.
-- A simple workflow engine that evaluates client risk and returns provenance.
-- Docker and Azure Container Apps deployment scaffolding.
+## Capabilities
+
+- **LangGraph agents** — compliance, onboarding/KYC, copilot, document
+  analysis, client profiling (`app/agents/`).
+- **MCP inter-agent protocol** — agents exposed as JSON-RPC 2.0 tools
+  (`app/mcp/`); inter-agent calls run through audited `tools/call`;
+  external MCP hosts connect at `POST /api/mcp`.
+- **GraphRAG** — Neo4j knowledge graph + vector retrieval with graph
+  enrichment (`app/services/retrieval.py`).
+- **NLP pipeline** — NER, contract clause extraction, regulatory document
+  classification (`app/services/nlp_pipeline.py`; rule-based by default,
+  spaCy / HF Transformers via `requirements-ml.txt`).
+- **Security** — prompt-injection defence, PII redaction (regex or
+  Microsoft Presidio), RBAC on LLM endpoints, HMAC-signed hash-chained
+  audit trail (`app/services/dlp.py`, `app/services/audit.py`).
+- **LLM adapter** — Azure OpenAI → **Vertex AI (incl. fine-tuned adapter
+  endpoints)** → OpenAI-compatible → deterministic mock
+  (`app/services/llm_adapter.py`).
+- **Evaluation harness** — RAGAS-style faithfulness / hallucination /
+  relevancy / context precision-recall over the RAG chain
+  (`app/eval/harness.py`, `scripts/run_evaluation.py`, `POST /api/eval/run`).
+- **Observability** — OpenTelemetry spans for agents, tools, MCP, NLP, and
+  LLM calls, exported to Azure Monitor / Application Insights.
+
+## Key API endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /api/agents/inspect` | Compliance decision workflow |
+| `POST /api/agents/onboarding/kyc` | KYC/AML onboarding (sanctions + PEP screening) |
+| `POST /api/documents/upload` | Document ingestion + NLP enrichment |
+| `POST /api/copilot/query` | Grounded policy Q&A (RBAC-gated) |
+| `POST /api/nlp/analyze` | NER / clauses / classification |
+| `POST /api/mcp` · `GET /api/mcp/tools` | MCP JSON-RPC endpoint + tool catalogue |
+| `POST /api/eval/run` | RAG evaluation report |
+| `GET /api/audit/logs` · `GET /api/audit/verify` | Signed audit trail + chain verification |
+| `GET /dashboard` · `GET /docs` | Live dashboard · OpenAPI docs |
 
 ## Run locally
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-uvicorn app.api:app --reload
+# Optional ML extras (spaCy NER, Presidio DLP, transformers, RAGAS):
+# pip install -r requirements-ml.txt; python -m spacy download en_core_web_sm
+pytest -q
+uvicorn app.api:app --reload    # http://localhost:8000/docs
 ```
 
-### Optional: run a local Neo4j backend
-1. Start Neo4j using Docker Compose:
+Runs fully offline by default (in-memory store, mock LLM, rule-based NLP).
+Configure real providers via environment variables — see the configuration
+table in `Azure_AKS_Implementation_Guide.md` §4.
+
+### Optional: local Neo4j backend
+
 ```powershell
 docker compose -f docker-compose.neo4j.yml up -d
-```
-2. Seed the local Neo4j instance:
-```powershell
 .\.venv\Scripts\python.exe scripts/seed_neo4j.py
-```
-3. Start the app with Neo4j environment variables:
-```powershell
-$env:NEO4J_URI = "bolt://localhost:7687"
-$env:NEO4J_USER = "neo4j"
-$env:NEO4J_PASSWORD = "test"
+$env:NEO4J_URI = "bolt://localhost:7687"; $env:NEO4J_USER = "neo4j"; $env:NEO4J_PASSWORD = "test"
 uvicorn app.api:app --reload
 ```
-4. Verify the inspect flow against Neo4j:
+
+## Deploy to Azure
+
+**AKS (primary — matches the use case):** full walkthrough in
+[`Azure_AKS_Implementation_Guide.md`](Azure_AKS_Implementation_Guide.md);
+automated happy path (cloud image build, cluster + monitoring, manifests):
+
+```bash
+az login
+bash infra/deploy_aks.sh
+```
+
+**Azure Container Apps (free-tier quick-deploy — scale-to-zero free grant):**
+
+```bash
+bash infra/deploy.sh
+```
+
+**Free tier only?** See the guide's §3b free-tier playbook: GitHub Models
+as the LLM, in-memory store, in-process events, rule-based NLP/DLP, and
+Container Apps hosting are all free; AKS runs on trial credit (the deploy
+script auto-falls back to a local Docker build where ACR Tasks are
+blocked — stop the cluster with `az aks stop` when idle).
+
+Kubernetes manifests live in `infra/k8s/` (namespace, ConfigMap,
+hardened Deployment, LoadBalancer Service, HPA, secret template).
+
+## Evaluation
+
 ```powershell
-.\.venv\Scripts\python.exe scripts/verify_neo4j_inspect.py
+python scripts/run_evaluation.py   # writes a report to data/eval/results/
 ```
 
-## Run with Docker
-```bash
-docker build -t investment-banking-agentic-api .
-docker run -p 8000:8000 investment-banking-agentic-api
-```
-
-## Deploy to Azure (Container Apps)
-
-Builds the image in the cloud with `az acr build` — **no local Docker required**.
-
-Prerequisites:
-- Azure CLI installed (https://aka.ms/installazurecli)
-- `az login` (and `az account set --subscription <id>` if you have more than one)
-
-Demo deploy (in-memory store, no auth):
-```bash
-bash infra/deploy.sh
-```
-
-Production deploy (persistent Neo4j Aura + Azure AD auth):
-```bash
-NEO4J_URI="neo4j+s://xxxxxxxx.databases.neo4j.io" \
-NEO4J_USER="neo4j" \
-NEO4J_PASSWORD="<your-aura-password>" \
-ENABLE_AZURE_AD=true \
-AZURE_AD_TENANT_ID="<tenant-id>" \
-AZURE_AD_CLIENT_ID="<app-registration-client-id>" \
-bash infra/deploy.sh
-```
-
-The Neo4j password is stored as a Container App secret. On success the script
-prints the public URL (`/health`, `/docs`, `/reviewer`). Override `RESOURCE_GROUP`,
-`LOCATION`, `ACR_NAME`, etc. via environment variables as needed (ACR names must be
-globally unique).
-
-## Notes for the course
-- The implementation uses a production-like architecture pattern and strong audit/provenance handling.
-- Azure OpenAI and Azure AI Search can be integrated next by replacing the mock workflow nodes with service clients.
+Golden Q&A dataset: `data/eval/golden_qa.json`.

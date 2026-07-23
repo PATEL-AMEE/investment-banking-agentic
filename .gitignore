@@ -5,3 +5,5 @@ uploads/
 .env
 data/sanctions/
 data/audit/
+infra/k8s/secret.yaml
+data/eval/results/
