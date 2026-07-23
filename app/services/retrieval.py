@@ -29,6 +29,20 @@ class GraphRAGRetriever:
         """(Re)build the vector index from the knowledge graph corpus."""
         nodes = getattr(self.store, "nodes", None) or {}
         items: List[tuple[str, str, Dict[str, Any]]] = []
+        if not nodes and hasattr(self.store, "retrieval_corpus"):
+            # Backend without an in-memory node map (Neo4j): the store
+            # supplies the indexable corpus directly.
+            try:
+                for entry in self.store.retrieval_corpus():
+                    items.append(
+                        (entry["source_id"], entry["text"], {"label": entry["label"], "node": entry.get("node", {})})
+                    )
+            except Exception:
+                items = []
+            self.vector_store = InMemoryVectorStore()
+            self.vector_store.add_batch(items)
+            self._indexed_node_count = len(items)
+            return len(items)
         for node in nodes.values():
             label = node.get("label", "")
             if label in ("Policy", "Regulation"):
@@ -47,7 +61,13 @@ class GraphRAGRetriever:
         return len(items)
 
     def _ensure_index(self) -> None:
-        nodes = getattr(self.store, "nodes", None) or {}
+        nodes = getattr(self.store, "nodes", None)
+        if nodes is None:
+            # Corpus-backed store (Neo4j): build once; chunks added later via
+            # index_chunks stay in place.
+            if self._indexed_node_count == -1:
+                self.build_index()
+            return
         if len(nodes) != self._indexed_node_count:
             self.build_index()
 

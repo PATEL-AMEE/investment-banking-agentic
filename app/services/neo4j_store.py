@@ -128,6 +128,25 @@ class Neo4jStore:
                                     client_id=client_row.get('client_id'),
                                 )
 
+    def retrieval_corpus(self) -> List[Dict[str, Any]]:
+        """Policy/Regulation/Evidence corpus for the GraphRAG vector index.
+
+        Mirrors the shape the retriever builds from the in-memory store's
+        ``nodes``: one entry per indexable node with its source id and text.
+        """
+        items: List[Dict[str, Any]] = []
+        with self.driver.session() as s:
+            for record in s.run("MATCH (p:Policy) RETURN p.policy_id AS id, p.summary AS text"):
+                if record["id"] and record["text"]:
+                    items.append({"source_id": record["id"], "text": record["text"], "label": "Policy", "node": {"policy_id": record["id"]}})
+            for record in s.run("MATCH (r:Regulation) RETURN r.regulation_id AS id, r.title AS text"):
+                if record["id"] and record["text"]:
+                    items.append({"source_id": record["id"], "text": record["text"], "label": "Regulation", "node": {"regulation_id": record["id"]}})
+            for record in s.run("MATCH (e:Evidence) RETURN e.evidence_id AS id, e.excerpt AS text"):
+                if record["id"] and record["text"]:
+                    items.append({"source_id": record["id"], "text": record["text"], "label": "Evidence", "node": {"evidence_id": record["id"]}})
+        return items
+
     def graph_summary(self) -> Dict[str, Any]:
         """Return node counts by label and relationship counts by type.
 
