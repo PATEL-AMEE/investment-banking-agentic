@@ -25,6 +25,8 @@ from app.services.onboarding import run_onboarding_workflow
 from app.services.audit import audit_log
 from app.services.event_bus import TOPIC_REVIEW_ESCALATED, TOPIC_REVIEW_RESOLVED, event_bus
 from app.services.local_auth import auth_required, issue_token, validate_local_token
+from app.services import rbac
+from app.services.rbac import check_permission
 from app.agents.document_analysis import run_document_analysis
 from app.agents.client_profiling import run_client_profiling
 from app.agents.copilot import run_copilot
@@ -104,31 +106,41 @@ def _is_anonymous_dev(current_user: dict) -> bool:
     )
 
 
-def require_reviewer_role(current_user: dict = Depends(get_current_user)) -> dict:
-    """Require the reviewer role.
+def require_permission(permission: str):
+    """Dependency factory: role -> permission check from the central policy.
 
     Enforced whenever the caller presents claims (Azure AD or local JWT) or
     REQUIRE_AUTH is on; the no-op path only remains for anonymous dev access.
+    Every real check — allowed or denied — is written to the signed audit
+    trail as an ``rbac_check`` event (see :mod:`app.services.rbac`).
     """
-    if _is_anonymous_dev(current_user):
-        return current_user
-    if user_has_role(current_user, "reviewer") or user_has_role(current_user, "Compliance.Reviewer"):
-        return current_user
-    raise HTTPException(status_code=403, detail="insufficient role: reviewer required")
+
+    def dependency(current_user: dict = Depends(get_current_user)) -> dict:
+        if _is_anonymous_dev(current_user):
+            return current_user
+        roles = list(current_user.get("roles") or [])
+        if check_permission(str(current_user.get("sub", "user-unknown")), roles, permission):
+            return current_user
+        raise HTTPException(status_code=403, detail=f"insufficient role: permission '{permission}' required")
+
+    return dependency
 
 
-# Roles allowed to reach LLM-backed endpoints (copilot, MCP, NLP). RBAC for
-# LLM endpoints: authenticated callers must hold an analyst/reviewer role;
-# the no-op path only remains for anonymous dev access.
-_LLM_ROLES = ("analyst", "reviewer", "Copilot.Analyst", "Compliance.Reviewer")
-
-
-def require_llm_access(current_user: dict = Depends(get_current_user)) -> dict:
-    if _is_anonymous_dev(current_user):
-        return current_user
-    if any(user_has_role(current_user, role) for role in _LLM_ROLES):
-        return current_user
-    raise HTTPException(status_code=403, detail="insufficient role: analyst or reviewer required for LLM endpoints")
+# Named dependencies for each endpoint surface (kept as module-level values so
+# the OpenAPI schema shows one dependency per route, not a closure per call).
+require_compliance_inspect = require_permission(rbac.PERM_COMPLIANCE_INSPECT)
+require_onboarding_kyc = require_permission(rbac.PERM_ONBOARDING_KYC)
+require_client_profile = require_permission(rbac.PERM_CLIENT_PROFILE)
+require_documents_upload = require_permission(rbac.PERM_DOCUMENTS_UPLOAD)
+require_copilot_query = require_permission(rbac.PERM_COPILOT_QUERY)
+require_agents_ask = require_permission(rbac.PERM_AGENTS_ASK)
+require_nlp_analyze = require_permission(rbac.PERM_NLP_ANALYZE)
+require_mcp_call = require_permission(rbac.PERM_MCP_CALL)
+require_eval_run = require_permission(rbac.PERM_EVAL_RUN)
+require_reviews_read = require_permission(rbac.PERM_REVIEWS_READ)
+require_reviews_resolve = require_permission(rbac.PERM_REVIEWS_RESOLVE)
+require_audit_read = require_permission(rbac.PERM_AUDIT_READ)
+require_dashboard_read = require_permission(rbac.PERM_DASHBOARD_READ)
 
 
 class TokenRequest(BaseModel):
@@ -223,7 +235,7 @@ def health() -> Dict[str, str]:
 
 
 @app.post("/api/agents/inspect", response_model=InspectResponse)
-def inspect(req: InspectRequest, current_user: dict = Depends(get_current_user)) -> InspectResponse:
+def inspect(req: InspectRequest, current_user: dict = Depends(require_compliance_inspect)) -> InspectResponse:
     try:
         result = run_inspection_workflow(
             client_id=req.clientId,
@@ -258,7 +270,7 @@ def inspect(req: InspectRequest, current_user: dict = Depends(get_current_user))
 
 
 @app.post("/api/agents/onboarding/kyc", response_model=KYCResponse)
-def onboarding_kyc(req: KYCRequest, current_user: dict = Depends(get_current_user)) -> KYCResponse:
+def onboarding_kyc(req: KYCRequest, current_user: dict = Depends(require_onboarding_kyc)) -> KYCResponse:
     client_id = req.clientId or "CLIENT-" + (req.clientName or "unknown").upper().replace(" ", "-")
     result = run_onboarding_workflow(
         client_id=client_id,
@@ -285,7 +297,7 @@ def onboarding_kyc(req: KYCRequest, current_user: dict = Depends(get_current_use
 
 
 @app.post("/api/documents/upload", response_model=UploadResponse)
-def upload_document(file: UploadFile = File(...), metadata: Optional[str] = Form(None), current_user: dict = Depends(get_current_user)) -> UploadResponse:
+def upload_document(file: UploadFile = File(...), metadata: Optional[str] = Form(None), current_user: dict = Depends(require_documents_upload)) -> UploadResponse:
     safe_name = file.filename or "upload.bin"
     upload_path = Path("uploads") / safe_name
     upload_path.parent.mkdir(parents=True, exist_ok=True)
@@ -306,7 +318,7 @@ def upload_document(file: UploadFile = File(...), metadata: Optional[str] = Form
 
 
 @app.post("/api/copilot/query")
-def copilot_query(payload: Dict[str, Any], current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+def copilot_query(payload: Dict[str, Any], current_user: dict = Depends(require_copilot_query)) -> Dict[str, Any]:
     return run_copilot(payload.get("query", ""), store)
 
 
@@ -320,7 +332,7 @@ class AskRequest(BaseModel):
 
 
 @app.post("/api/agents/ask")
-def agents_ask(req: AskRequest, current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+def agents_ask(req: AskRequest, current_user: dict = Depends(require_agents_ask)) -> Dict[str, Any]:
     """Supervisor agent: one NL entry point routed across the worker agents.
 
     Classifies the request, enforces per-intent RBAC centrally, dispatches
@@ -351,7 +363,7 @@ class NLPAnalyzeRequest(BaseModel):
 
 
 @app.post("/api/nlp/analyze")
-def nlp_analyze(payload: NLPAnalyzeRequest, current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+def nlp_analyze(payload: NLPAnalyzeRequest, current_user: dict = Depends(require_nlp_analyze)) -> Dict[str, Any]:
     """NLP pipeline: NER, contract clause extraction, document classification."""
     from app.services.nlp_pipeline import analyze
 
@@ -359,7 +371,7 @@ def nlp_analyze(payload: NLPAnalyzeRequest, current_user: dict = Depends(require
 
 
 @app.post("/api/mcp")
-def mcp_endpoint(request: Dict[str, Any], current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+def mcp_endpoint(request: Dict[str, Any], current_user: dict = Depends(require_mcp_call)) -> Dict[str, Any]:
     """MCP JSON-RPC 2.0 endpoint (initialize, tools/list, tools/call).
 
     Inter-agent and external-host access to the platform's agents as MCP
@@ -372,7 +384,7 @@ def mcp_endpoint(request: Dict[str, Any], current_user: dict = Depends(require_l
 
 
 @app.post("/api/eval/run")
-def run_eval(current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]:
+def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
     """Run the RAGAS-style evaluation harness over the golden Q&A dataset.
 
     Scores faithfulness, hallucination rate, answer relevancy, and context
@@ -395,7 +407,7 @@ def run_eval(current_user: dict = Depends(require_llm_access)) -> Dict[str, Any]
 
 
 @app.get("/api/mcp/tools")
-def mcp_tools(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def mcp_tools(current_user: dict = Depends(require_mcp_call)) -> Dict[str, Any]:
     """Convenience listing of the MCP tool catalogue (same data as tools/list)."""
     from app.mcp.server import get_mcp_server
 
@@ -405,7 +417,7 @@ def mcp_tools(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
 
 
 @app.get("/api/agents/profile/{client_id}")
-def client_profile(client_id: str, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def client_profile(client_id: str, current_user: dict = Depends(require_client_profile)) -> Dict[str, Any]:
     """360° client profile assembled by the client-profiling agent."""
     try:
         return run_client_profiling(client_id, store)
@@ -414,7 +426,7 @@ def client_profile(client_id: str, current_user: dict = Depends(get_current_user
 
 
 @app.get("/api/reviews/pending", response_model=list[ReviewTask])
-def pending_reviews(current_user: dict = Depends(require_reviewer_role)) -> list[ReviewTask]:
+def pending_reviews(current_user: dict = Depends(require_reviews_read)) -> list[ReviewTask]:
     # Deduplicate defensively by review_id (keep the most recent upsert).
     unique: Dict[str, Dict[str, Any]] = {}
     for review in store.list_pending_reviews():
@@ -423,7 +435,7 @@ def pending_reviews(current_user: dict = Depends(require_reviewer_role)) -> list
 
 
 @app.post("/api/reviews/{review_id}/resolve")
-def resolve_review(review_id: str, payload: ReviewDecision, current_user: dict = Depends(require_reviewer_role)) -> Dict[str, Any]:
+def resolve_review(review_id: str, payload: ReviewDecision, current_user: dict = Depends(require_reviews_resolve)) -> Dict[str, Any]:
     try:
         review = store.resolve_review(review_id, payload.decision, payload.reviewer, payload.notes)
     except Exception as exc:
@@ -460,7 +472,7 @@ def _store_counts() -> Dict[str, int]:
 
 
 @app.get("/api/dashboard/summary")
-def dashboard_summary(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def dashboard_summary(current_user: dict = Depends(require_dashboard_read)) -> Dict[str, Any]:
     counts = _store_counts()
     nodes = getattr(store, "nodes", {}) or {}
     clients = sorted(
@@ -545,26 +557,26 @@ def overview_page() -> FileResponse:
 
 
 @app.get("/api/audit/logs")
-def get_audit_logs(request_id: Optional[str] = None, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def get_audit_logs(request_id: Optional[str] = None, current_user: dict = Depends(require_audit_read)) -> Dict[str, Any]:
     events = audit_log.list(request_id)
     return {"request_id": request_id, "count": len(events), "audit_events": events}
 
 
 @app.get("/api/audit/verify")
-def verify_audit_chain(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def verify_audit_chain(current_user: dict = Depends(require_audit_read)) -> Dict[str, Any]:
     """Verify the SHA-256 hash chain over the append-only audit trail."""
     return audit_log.verify_chain()
 
 
 @app.get("/api/events/recent")
-def recent_events(topic: Optional[str] = None, limit: int = 50, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def recent_events(topic: Optional[str] = None, limit: int = 50, current_user: dict = Depends(require_dashboard_read)) -> Dict[str, Any]:
     """Recent domain events published on the agent event bus."""
     events = event_bus.recent(topic, limit)
     return {"topic": topic, "count": len(events), "events": events}
 
 
 @app.get("/api/telemetry/spans")
-def telemetry_spans(limit: int = 100, current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def telemetry_spans(limit: int = 100, current_user: dict = Depends(require_dashboard_read)) -> Dict[str, Any]:
     """Recent OpenTelemetry spans (agent runs, tool calls, LLM requests)."""
     from app.services.telemetry import recent_spans
 
@@ -573,7 +585,7 @@ def telemetry_spans(limit: int = 100, current_user: dict = Depends(get_current_u
 
 
 @app.get("/api/telemetry/llm")
-def telemetry_llm(current_user: dict = Depends(get_current_user)) -> Dict[str, Any]:
+def telemetry_llm(current_user: dict = Depends(require_dashboard_read)) -> Dict[str, Any]:
     """Aggregate LLM token usage and latency per model."""
     from app.services.telemetry import llm_usage
 
@@ -601,7 +613,7 @@ event_bus.subscribe(TOPIC_REVIEW_ESCALATED, _audit_escalation)
 
 
 @app.get("/api/reviews/dashboard")
-def review_dashboard(current_user: dict = Depends(require_reviewer_role)) -> Dict[str, Any]:
+def review_dashboard(current_user: dict = Depends(require_reviews_read)) -> Dict[str, Any]:
     pending = store.list_pending_reviews()
     resolved = [review for review in store.list_all_reviews() if review.get("status") == "resolved"]
     return {

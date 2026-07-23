@@ -24,6 +24,7 @@ from typing import Any, Dict, List, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.mcp.client import MCPClient
+from app.services import rbac
 from app.services.dlp import guard_prompt
 from app.services.event_bus import TOPIC_SUPERVISOR_ROUTED, event_bus
 
@@ -37,16 +38,16 @@ _INTENT_PATTERNS: Dict[str, re.Pattern[str]] = {
     "nlp_analyze": re.compile(r"entit(y|ies)|clause|classif(y|ication)|extract", re.IGNORECASE),
 }
 
-# Central RBAC: roles allowed per intent. ``roles=None`` marks the anonymous
-# dev path (no auth configured) and bypasses the check, mirroring the API
-# layer's ``_is_anonymous_dev`` behaviour.
-_ANALYST_ROLES = ("analyst", "reviewer", "Copilot.Analyst", "Compliance.Reviewer")
-_INTENT_ROLES: Dict[str, tuple[str, ...]] = {
-    "compliance_inspect": _ANALYST_ROLES,
-    "sanctions_check": _ANALYST_ROLES,
-    "client_profile": _ANALYST_ROLES,
-    "nlp_analyze": _ANALYST_ROLES,
-    "copilot_query": _ANALYST_ROLES,
+# Central RBAC: each intent maps to a permission in the platform policy
+# (:mod:`app.services.rbac`). ``roles=None`` marks the anonymous dev path
+# (no auth configured) and bypasses the check, mirroring the API layer's
+# ``_is_anonymous_dev`` behaviour.
+_INTENT_PERMISSION: Dict[str, str] = {
+    "compliance_inspect": rbac.PERM_COMPLIANCE_INSPECT,
+    "sanctions_check": rbac.PERM_SANCTIONS_CHECK,
+    "client_profile": rbac.PERM_CLIENT_PROFILE,
+    "nlp_analyze": rbac.PERM_NLP_ANALYZE,
+    "copilot_query": rbac.PERM_COPILOT_QUERY,
 }
 
 _WORKER_NODE = {
@@ -171,14 +172,25 @@ def _classify_intents(state: SupervisorState) -> Dict[str, Any]:
 
 # ----------------------------------------------------------------------- rbac
 def _enforce_rbac(state: SupervisorState) -> Dict[str, Any]:
+    """Gateway check before any worker/LLM runs: role → permitted intents.
+
+    Each per-intent decision — allowed or denied — is written to the signed
+    audit trail (``rbac_check``) via :func:`app.services.rbac.check_permission`.
+    """
     roles = state.get("roles")
     if roles is None:  # anonymous dev — no auth configured
         return {"allowed_intents": state["intents"], "denied_intents": []}
     allowed: List[str] = []
     denied: List[str] = []
     for intent in state["intents"]:
-        required = _INTENT_ROLES.get(intent, _ANALYST_ROLES)
-        (allowed if any(role in required for role in roles) else denied).append(intent)
+        permission = _INTENT_PERMISSION.get(intent, rbac.PERM_AGENTS_ASK)
+        ok = rbac.check_permission(
+            state.get("user_id", "user-unknown"),
+            list(roles),
+            permission,
+            resource=f"intent:{intent}",
+        )
+        (allowed if ok else denied).append(intent)
     return {"allowed_intents": allowed, "denied_intents": denied}
 
 

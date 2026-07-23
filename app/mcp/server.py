@@ -241,6 +241,20 @@ class MCPServer:
         arguments = params.get("arguments") or {}
         if name not in self._handlers:
             return self._error(request_id, INVALID_PARAMS, f"Unknown tool: {name}")
+        # Agent-to-agent RBAC: known internal service identities may only
+        # invoke the tools their workflow declares; denials are audited so a
+        # scope violation is evidenced, not silently swallowed.
+        from app.services.rbac import agent_may_call
+
+        if not agent_may_call(actor_id, name):
+            audit_log.record(
+                event_type="rbac_check",
+                actor_id=actor_id,
+                action=f"tools/call:{name}",
+                result="denied",
+                metadata={"reason": "tool outside agent scope"},
+            )
+            return self._error(request_id, INVALID_PARAMS, f"Agent {actor_id} is not permitted to call tool: {name}")
         missing = [
             field
             for field in self._tools[name]["inputSchema"].get("required", [])
