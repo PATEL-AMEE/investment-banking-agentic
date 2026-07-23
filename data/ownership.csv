@@ -1,0 +1,11 @@
+entity_id,name,country,ownership_pct,client_id
+ENT-001,Harbour Nominees Ltd,KY,80,C789
+ENT-002,Emerald Trustees DAC,IE,20,C789
+ENT-003,Globex International Holdings,US,100,C456
+ENT-004,BluePeak Beteiligungs GmbH,DE,65,C321
+ENT-005,Atlas Fiduciary Services,VG,35,C321
+ENT-006,Acme Founders LLP,GB,100,C123
+ENT-007,Cedar Point GP Inc,US,55,C654
+ENT-008,Solstice Capital Partners,KY,45,C654
+ENT-009,Lumiere Famille SARL,FR,100,C777
+ENT-010,Meridian Trust Co,GB,100,C555

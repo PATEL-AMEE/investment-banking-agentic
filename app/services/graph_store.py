@@ -6,6 +6,11 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List
 
+# Country-risk framework: jurisdictions classified as high risk for ownership
+# and onboarding purposes (offshore secrecy or sanctions-adjacent). Shared by
+# both graph backends so path explanations stay consistent.
+HIGH_RISK_COUNTRIES = {"KY", "VG", "PA", "IR", "SY", "KP", "RU", "BY"}
+
 
 @dataclass
 class GraphStore:
@@ -21,12 +26,14 @@ class GraphStore:
         evidence_path = base_dir / "evidence.csv"
         policy_path = base_dir / "policies.csv"
         regulation_path = base_dir / "regulations.csv"
+        ownership_path = base_dir / "ownership.csv"
 
         self._load_csv_rows(client_path, "ClientProfile", "client_id")
         self._load_csv_rows(document_path, "Document", "doc_id")
         self._load_csv_rows(evidence_path, "Evidence", "evidence_id")
         self._load_csv_rows(policy_path, "Policy", "policy_id")
         self._load_csv_rows(regulation_path, "Regulation", "regulation_id")
+        self._load_csv_rows(ownership_path, "Entity", "entity_id")
 
         self._build_relationships()
 
@@ -39,6 +46,7 @@ class GraphStore:
           - Evidence      -[:SUPPORTS]->     Document    (from evidence.doc_id)
           - Policy        -[:CITES]->        Regulation  (from policy.regulation_id)
           - Regulation    -[:APPLIES_TO]->   ClientProfile (jurisdiction match / EU)
+          - ClientProfile -[:OWNED_BY]->     Entity      (from ownership.client_id)
         """
         clients = [n for n in self.nodes.values() if n.get("label") == "ClientProfile"]
         regulations = [n for n in self.nodes.values() if n.get("label") == "Regulation"]
@@ -71,6 +79,12 @@ class GraphStore:
                     self.relationships.append(
                         {"from": regulation["regulation_id"], "to": client["client_id"], "type": "APPLIES_TO"}
                     )
+
+        for node in self.nodes.values():
+            if node.get("label") == "Entity" and node.get("client_id") in self.nodes:
+                self.relationships.append(
+                    {"from": node["client_id"], "to": node["entity_id"], "type": "OWNED_BY"}
+                )
 
     @staticmethod
     def _parse_refs(raw: Any) -> List[str]:
@@ -133,6 +147,15 @@ class GraphStore:
         }
         return [self.nodes[pid] for pid in policy_ids if pid in self.nodes]
 
+    def get_ownership(self, client_id: str) -> List[Dict[str, Any]]:
+        """Beneficial-ownership entities for a client (via OWNED_BY edges)."""
+        entity_ids = [
+            rel["to"]
+            for rel in self.relationships
+            if rel["from"] == client_id and rel["type"] == "OWNED_BY"
+        ]
+        return [self.nodes[eid] for eid in entity_ids if eid in self.nodes]
+
     def get_regulations_by_jurisdiction(self, jurisdiction: str) -> List[Dict[str, Any]]:
         """Return regulations that apply to a jurisdiction (exact match or EU-wide)."""
         jurisdiction = (jurisdiction or "").upper()
@@ -143,7 +166,21 @@ class GraphStore:
             and node.get("jurisdiction", "").upper() in {jurisdiction, "EU"}
         ]
 
-    def add_review(self, review_id: str, client_id: str, reason: str, severity: str, user_id: str) -> Dict[str, Any]:
+    def add_review(
+        self,
+        review_id: str,
+        client_id: str,
+        reason: str,
+        severity: str,
+        user_id: str,
+        details: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Upsert a review task (idempotent on review_id — no duplicates).
+
+        ``details`` is the approval package shown to the human reviewer:
+        evidence, policy references, agent recommendation, approver role,
+        and the available actions.
+        """
         review = {
             "review_id": review_id,
             "client_id": client_id,
@@ -151,7 +188,12 @@ class GraphStore:
             "severity": severity,
             "user_id": user_id,
             "status": "pending",
+            "details": details or {},
         }
+        for index, existing in enumerate(self.reviews):
+            if existing["review_id"] == review_id:
+                self.reviews[index] = review
+                return review
         self.reviews.append(review)
         return review
 

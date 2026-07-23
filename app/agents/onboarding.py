@@ -9,6 +9,7 @@ output contract matches the original ``run_onboarding_workflow`` exactly.
 from __future__ import annotations
 
 from typing import Any, Dict, List, Optional, TypedDict
+from uuid import uuid4
 
 from langgraph.graph import END, START, StateGraph
 
@@ -121,20 +122,48 @@ def _route_after_risk(state: OnboardingState) -> str:
 
 
 def _escalate_if_needed(state: OnboardingState) -> Dict[str, Any]:
-    """Node: escalate_if_needed — create a human review task."""
+    """Node: escalate_if_needed — create a human review task with an approval package."""
     request_id = state["request_id"]
     review_suffix = request_id.rsplit("-", 1)[-1] or request_id
+    if not review_suffix or review_suffix.lower() in {"unknown", "none"}:
+        review_suffix = uuid4().hex[:8].upper()
     review_task_id: Optional[str] = f"REV-KYC-{review_suffix}"
     reason_bits = []
+    evidence: List[str] = []
     if state["pep"]["pep_found"]:
         reason_bits.append("PEP detected")
+        evidence.extend(
+            f"PEP match: {detail.get('name')} ({detail.get('pep_type')})"
+            for detail in state["pep"]["pep_details"]
+        )
     if state["sanctions"]["is_sanctioned"]:
         reason_bits.append("sanctions match")
+        evidence.extend(
+            f"Sanctions match: {match.get('entity')} ({match.get('list')} list, {match.get('type')})"
+            for match in state["sanctions"].get("matches", [])
+        )
     if state["risk_score"] >= 5.0:
         reason_bits.append(f"risk score {state['risk_score']:.1f}")
     reason = "; ".join(reason_bits) or "Enhanced due diligence required"
+    details = {
+        "case_id": review_task_id,
+        "risk_level": state["risk_tier"].capitalize(),
+        "agent_recommendation": "Escalate — hold onboarding until the review is approved",
+        "decision_summary": (
+            f"KYC assessment for {state['client_name']} ({state['jurisdiction']}): "
+            f"{state['final_status']} with risk score {state['risk_score']:.1f}/10."
+        ),
+        "evidence": evidence[:5],
+        "policy_references": [
+            reg.get("regulation_id") for reg in state["regulations"] if reg.get("regulation_id")
+        ],
+        "approver_role": "Financial Crime Risk Team",
+        "available_actions": ["approve", "reject", "request_more_information", "escalate_to_senior_compliance"],
+    }
     try:
-        state["store"].add_review(review_task_id, state["client_id"], reason, state["risk_tier"], state["user_id"])
+        state["store"].add_review(
+            review_task_id, state["client_id"], reason, state["risk_tier"], state["user_id"], details=details
+        )
     except Exception:
         review_task_id = None
     return {"review_task_id": review_task_id}

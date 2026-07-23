@@ -3,8 +3,9 @@
 fetch_client → gather_relationships → build_profile
 
 Produces a 360° client view by traversing the knowledge graph: identity,
-risk banding, related documents/evidence/policies, and the regulations
-applying in the client's home jurisdiction.
+risk banding, related documents/evidence/policies, the regulations applying
+in the client's home jurisdiction, and the beneficial-ownership structure
+with explained relationship paths (client → owner → jurisdiction → rule).
 """
 from __future__ import annotations
 
@@ -13,6 +14,7 @@ from typing import Any, Dict, List, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from app.agents.base import default_registry
+from app.services.graph_store import HIGH_RISK_COUNTRIES
 
 
 class ProfilingState(TypedDict, total=False):
@@ -25,6 +27,7 @@ class ProfilingState(TypedDict, total=False):
     evidence: List[Dict[str, Any]]
     policies: List[Dict[str, Any]]
     regulations: List[Dict[str, Any]]
+    owners: List[Dict[str, Any]]
     # output
     result: Dict[str, Any]
 
@@ -46,7 +49,55 @@ def _gather_relationships(state: ProfilingState) -> Dict[str, Any]:
     regulations = default_registry.call(
         "graph_retriever", store=store, jurisdiction=(state["client"].get("country") or "").upper()
     )
-    return {"documents": documents, "evidence": evidence, "policies": policies, "regulations": regulations}
+    # Ownership traversal is optional on older store backends.
+    get_ownership = getattr(store, "get_ownership", None)
+    owners = get_ownership(state["client_id"]) if get_ownership else []
+    return {
+        "documents": documents,
+        "evidence": evidence,
+        "policies": policies,
+        "regulations": regulations,
+        "owners": owners,
+    }
+
+
+def _build_ownership_paths(client: Dict[str, Any], owners: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Explained graph paths: client → owner entity → jurisdiction → rule.
+
+    Each path carries the hop list, a one-line narrative, and — when the
+    owner sits in a jurisdiction flagged by the country-risk framework — the
+    triggered control and the reason the conclusion was reached.
+    """
+    client_name = client.get("name") or client.get("client_id", "client")
+    paths: List[Dict[str, Any]] = []
+    for owner in owners:
+        owner_name = owner.get("name", owner.get("entity_id", "entity"))
+        country = (owner.get("country") or "").upper()
+        pct = owner.get("ownership_pct", "")
+        high_risk = country in HIGH_RISK_COUNTRIES
+
+        hops = [
+            {"from": client_name, "relation": "OWNED_BY", "to": owner_name, "detail": f"{pct}% beneficial ownership" if pct else ""},
+            {"from": owner_name, "relation": "LOCATED_IN", "to": country},
+        ]
+        narrative = f"{client_name} → owned by {owner_name} ({pct}%) → located in {country}"
+        if high_risk:
+            hops.append({"from": country, "relation": "SUBJECT_TO", "to": "Enhanced Due Diligence (country-risk framework)"})
+            narrative += " → subject to Enhanced Due Diligence → requires Financial Crime Risk Team approval"
+        paths.append(
+            {
+                "hops": hops,
+                "narrative": narrative,
+                "high_risk": high_risk,
+                "reason": (
+                    f"{owner_name} operates in {country}, a jurisdiction classified as high risk "
+                    "under the bank's country-risk framework."
+                    if high_risk
+                    else f"{country} is not flagged by the bank's country-risk framework."
+                ),
+            }
+        )
+    return paths
 
 
 def _build_profile(state: ProfilingState) -> Dict[str, Any]:
@@ -58,6 +109,18 @@ def _build_profile(state: ProfilingState) -> Dict[str, Any]:
         risk_band = "medium"
     else:
         risk_band = "low"
+
+    owners = state.get("owners") or []
+    ownership_paths = _build_ownership_paths(client, owners)
+    high_risk_ownership = any(path["high_risk"] for path in ownership_paths)
+
+    summary = (
+        f"{client.get('name')} ({client.get('country')}) is a {risk_band}-risk client "
+        f"(score {risk_score:.2f}) with {len(state['documents'])} documents, "
+        f"{len(state['evidence'])} evidence items and {len(state['policies'])} applicable policies."
+    )
+    if high_risk_ownership:
+        summary += " Ownership structure includes entities in high-risk jurisdictions; enhanced due diligence applies."
 
     return {
         "result": {
@@ -75,11 +138,18 @@ def _build_profile(state: ProfilingState) -> Dict[str, Any]:
                 {"regulation_id": reg.get("regulation_id"), "title": reg.get("title", "")}
                 for reg in state["regulations"]
             ],
-            "summary": (
-                f"{client.get('name')} ({client.get('country')}) is a {risk_band}-risk client "
-                f"(score {risk_score:.2f}) with {len(state['documents'])} documents, "
-                f"{len(state['evidence'])} evidence items and {len(state['policies'])} applicable policies."
-            ),
+            "ownership_structure": [
+                {
+                    "entity_id": owner.get("entity_id"),
+                    "name": owner.get("name"),
+                    "country": owner.get("country"),
+                    "ownership_pct": owner.get("ownership_pct"),
+                }
+                for owner in owners
+            ],
+            "relationship_paths": ownership_paths,
+            "high_risk_ownership": high_risk_ownership,
+            "summary": summary,
         }
     }
 

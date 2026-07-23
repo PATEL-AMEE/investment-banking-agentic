@@ -200,6 +200,9 @@ class ReviewTask(BaseModel):
     severity: str
     user_id: str
     status: str
+    # Approval package for the human reviewer: decision summary, evidence,
+    # policy references, recommendation, approver role, available actions.
+    details: Dict[str, Any] = {}
 
 
 class ReviewDecision(BaseModel):
@@ -412,7 +415,11 @@ def client_profile(client_id: str, current_user: dict = Depends(get_current_user
 
 @app.get("/api/reviews/pending", response_model=list[ReviewTask])
 def pending_reviews(current_user: dict = Depends(require_reviewer_role)) -> list[ReviewTask]:
-    return [ReviewTask(**review) for review in store.list_pending_reviews()]
+    # Deduplicate defensively by review_id (keep the most recent upsert).
+    unique: Dict[str, Dict[str, Any]] = {}
+    for review in store.list_pending_reviews():
+        unique[review["review_id"]] = review
+    return [ReviewTask(**review) for review in unique.values()]
 
 
 @app.post("/api/reviews/{review_id}/resolve")

@@ -8,6 +8,7 @@ Output contract matches the original ``run_inspection_workflow`` exactly.
 from __future__ import annotations
 
 from typing import Any, Dict, List, TypedDict
+from uuid import uuid4
 
 from langgraph.graph import END, START, StateGraph
 
@@ -94,15 +95,36 @@ def _route_after_decide(state: ComplianceState) -> str:
 
 def _escalate_if_needed(state: ComplianceState) -> Dict[str, Any]:
     # Reuse the trailing segment of the request id (e.g. "REQ-001" -> "001")
-    # so review ids read cleanly as "REV-001" rather than "REV--001".
+    # so review ids read cleanly as "REV-001" rather than "REV--001". Fall
+    # back to a unique suffix when the request id carries no real identity
+    # (avoids collisions like "REV-unknown" swallowing unrelated cases).
     review_suffix = state["request_id"].rsplit("-", 1)[-1] or state["request_id"]
+    if not review_suffix or review_suffix.lower() in {"unknown", "none"}:
+        review_suffix = uuid4().hex[:8].upper()
     review_task_id = f"REV-{review_suffix}"
+    severity = "high" if state["risk_score"] > 0.7 else "medium"
+    # Approval package: everything a human approver needs to act on the case.
+    details = {
+        "case_id": review_task_id,
+        "risk_level": severity.capitalize(),
+        "agent_recommendation": "Escalate to Level 2 compliance review",
+        "decision_summary": (
+            f"Compliance decision '{state['decision']}' for client {state['client_id']} "
+            f"(risk score {state['risk_score']:.2f}, confidence {state['confidence']:.2f})."
+        ),
+        "evidence": [e.get("excerpt", "") for e in state["evidence"] if e.get("excerpt")][:5],
+        "policy_references": [p.get("policy_id") for p in state["policies"] if p.get("policy_id")],
+        "rule_hits": [hit["rule_id"] for hit in state["rule_hits"]],
+        "approver_role": "Level 2 Compliance Officer",
+        "available_actions": ["approve", "reject", "request_more_information", "escalate_to_senior_compliance"],
+    }
     state["store"].add_review(
         review_task_id,
         state["client_id"],
         "High risk or low confidence review required",
-        "high" if state["risk_score"] > 0.7 else "medium",
+        severity,
         state["user_id"],
+        details=details,
     )
     return {"review_task_id": review_task_id}
 

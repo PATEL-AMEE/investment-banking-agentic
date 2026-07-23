@@ -26,6 +26,16 @@ class Neo4jStore:
     def load_demo_data(self, data_dir: Path | None = None) -> None:
         base_dir = data_dir or Path('data')
         with self.driver.session() as s:
+            # Hygiene: collapse Review duplicates left by the old CREATE-based
+            # add_review, then enforce uniqueness so they cannot recur.
+            s.run(
+                "MATCH (r:Review) WITH r.review_id AS id, collect(r) AS nodes "
+                "WHERE size(nodes) > 1 FOREACH (n IN tail(nodes) | DETACH DELETE n)"
+            )
+            s.run(
+                "CREATE CONSTRAINT review_id_unique IF NOT EXISTS "
+                "FOR (r:Review) REQUIRE r.review_id IS UNIQUE"
+            )
             client_path = base_dir / 'clients.csv'
             if client_path.exists():
                 with client_path.open('r', encoding='utf-8') as fh:
@@ -114,6 +124,22 @@ class Neo4jStore:
                             regulation_id=regulation_id,
                         )
 
+            ownership_path = base_dir / 'ownership.csv'
+            if ownership_path.exists():
+                with ownership_path.open('r', encoding='utf-8') as fh:
+                    for row in csv.DictReader(fh):
+                        s.run(
+                            "MERGE (e:Entity {entity_id: $entity_id}) SET e += $props",
+                            entity_id=row.get('entity_id'),
+                            props=row,
+                        )
+                        if row.get('client_id'):
+                            s.run(
+                                "MATCH (c:ClientProfile {client_id:$client_id}), (e:Entity {entity_id:$entity_id}) MERGE (c)-[:OWNED_BY]->(e)",
+                                client_id=row.get('client_id'),
+                                entity_id=row.get('entity_id'),
+                            )
+
             if regulation_path.exists() and client_path.exists():
                 with regulation_path.open('r', encoding='utf-8') as regs, client_path.open('r', encoding='utf-8') as clients:
                     reg_rows = list(csv.DictReader(regs))
@@ -193,6 +219,29 @@ class Neo4jStore:
             )
             return [dict(r['p']) for r in res]
 
+    def get_ownership(self, client_id: str) -> List[Dict[str, Any]]:
+        """Beneficial-ownership entities for a client (via OWNED_BY edges)."""
+        with self.driver.session() as s:
+            res = s.run(
+                "MATCH (:ClientProfile {client_id:$client_id})-[:OWNED_BY]->(e:Entity) RETURN e",
+                client_id=client_id,
+            )
+            return [dict(r['e']) for r in res]
+
+    def get_regulations_by_jurisdiction(self, jurisdiction: str) -> List[Dict[str, Any]]:
+        """Regulations applying to a jurisdiction (exact match or EU-wide).
+
+        Mirrors GraphStore.get_regulations_by_jurisdiction so the
+        ``graph_retriever`` tool works identically on both backends.
+        """
+        jurisdiction = (jurisdiction or "").upper()
+        with self.driver.session() as s:
+            res = s.run(
+                "MATCH (r:Regulation) WHERE toUpper(r.jurisdiction) IN [$jurisdiction, 'EU'] RETURN r",
+                jurisdiction=jurisdiction,
+            )
+            return [dict(r['r']) for r in res]
+
     def add_document(
         self,
         doc_id: str,
@@ -233,27 +282,54 @@ class Neo4jStore:
                     )
         return props
 
-    def add_review(self, review_id: str, client_id: str, reason: str, severity: str, user_id: str) -> Dict[str, Any]:
+    def add_review(
+        self,
+        review_id: str,
+        client_id: str,
+        reason: str,
+        severity: str,
+        user_id: str,
+        details: Dict[str, Any] | None = None,
+    ) -> Dict[str, Any]:
+        """Upsert a review task (MERGE on review_id — idempotent, no duplicates).
+
+        ``details`` (the reviewer approval package) is serialized to JSON
+        because Neo4j properties must be primitives.
+        """
         with self.driver.session() as s:
             s.run(
-                "CREATE (r:Review {review_id:$review_id, client_id:$client_id, reason:$reason, severity:$severity, user_id:$user_id, status:'pending'})",
+                "MERGE (r:Review {review_id:$review_id}) "
+                "SET r.client_id=$client_id, r.reason=$reason, r.severity=$severity, "
+                "r.user_id=$user_id, r.status='pending', r.details=$details",
                 review_id=review_id,
                 client_id=client_id,
                 reason=reason,
                 severity=severity,
                 user_id=user_id,
+                details=json.dumps(details or {}),
             )
-        return {"review_id": review_id, "client_id": client_id, "status": "pending"}
+        return {"review_id": review_id, "client_id": client_id, "status": "pending", "details": details or {}}
+
+    @staticmethod
+    def _parse_review(props: Dict[str, Any]) -> Dict[str, Any]:
+        """Deserialize the JSON ``details`` property back into a dict."""
+        raw = props.get("details")
+        if isinstance(raw, str):
+            try:
+                props["details"] = json.loads(raw)
+            except (ValueError, TypeError):
+                props["details"] = {}
+        return props
 
     def list_pending_reviews(self) -> List[Dict[str, Any]]:
         with self.driver.session() as s:
             res = s.run("MATCH (r:Review {status:'pending'}) RETURN r")
-            return [dict(r['r']) for r in res]
+            return [self._parse_review(dict(r['r'])) for r in res]
 
     def list_all_reviews(self) -> List[Dict[str, Any]]:
         with self.driver.session() as s:
             res = s.run("MATCH (r:Review) RETURN r")
-            return [dict(r['r']) for r in res]
+            return [self._parse_review(dict(r['r'])) for r in res]
 
     def resolve_review(self, review_id: str, decision: str, reviewer: str, notes: str | None = None) -> Optional[Dict[str, Any]]:
         with self.driver.session() as s:

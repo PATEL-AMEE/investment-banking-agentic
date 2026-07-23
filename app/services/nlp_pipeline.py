@@ -51,8 +51,9 @@ _CLAUSE_KEYWORDS: Dict[str, List[str]] = {
     "data_protection": ["personal data", "data protection", "gdpr", "data subject"],
     "audit_rights": ["right to audit", "audit rights", "books and records"],
     "payment_terms": ["payment terms", "payable within", "settlement date"],
-    "liability": ["limitation of liability", "liable for", "aggregate liability"],
+    "liability": ["limitation of liability", "liable for", "aggregate liability", "unlimited liability"],
     "anti_bribery": ["anti-bribery", "corruption", "facilitation payment"],
+    "data_retention": ["data retention", "retention period", "retain records", "retain the records", "records shall be retained", "keeping records", "keep records"],
 }
 
 # -------------------------------------------------------- classification
@@ -61,7 +62,8 @@ _CATEGORY_KEYWORDS: Dict[str, Dict[str, float]] = {
     "aml_policy": {"anti-money laundering": 2, "aml": 2, "money laundering": 2, "suspicious activity": 1.5, "due diligence": 1},
     "kyc_procedure": {"know your customer": 2, "kyc": 2, "customer identification": 1.5, "onboarding": 1, "identity verification": 1.5},
     "sanctions_notice": {"sanctions": 2, "ofac": 2, "embargo": 1.5, "designated person": 1.5, "restricted party": 1.5},
-    "trading_agreement": {"agreement": 1, "counterparty": 1.5, "settlement": 1, "isda": 2, "collateral": 1.5, "governing law": 1},
+    "trading_agreement": {"counterparty": 1.5, "settlement": 1, "isda": 2, "collateral": 1.5, "trading agreement": 2, "master agreement": 2},
+    "client_services_agreement": {"client services agreement": 3, "services agreement": 2, "service agreement": 2, "engagement letter": 2, "statement of work": 1.5},
     "regulatory_filing": {"regulator": 1.5, "filing": 1.5, "mifid": 2, "disclosure": 1, "supervisory": 1.5},
     "pep_screening": {"politically exposed": 2, "pep": 2, "public official": 1.5, "enhanced review": 1},
 }
@@ -192,15 +194,93 @@ def classify_document(text: str) -> Dict[str, Any]:
     return {"category": best, "confidence": round(scores[best] / total, 4), "scores": scores, "engine": "rule-based"}
 
 
+# ------------------------------------------------- template comparison
+# Approved-template expectations per document category: the clause types a
+# conforming document must contain. Categories not listed have no template.
+_TEMPLATE_EXPECTED_CLAUSES: Dict[str, List[str]] = {
+    "client_services_agreement": ["governing_law", "confidentiality", "termination", "data_protection", "data_retention", "liability"],
+    "trading_agreement": ["governing_law", "payment_terms", "termination", "liability", "sanctions_compliance"],
+}
+
+# Policy limits used to flag risky contractual language inside a clause.
+_MAX_RETENTION_YEARS = 7
+_MIN_TERMINATION_NOTICE_DAYS = 30
+
+_YEARS_PATTERN = re.compile(r"(\d{1,3})\s*(?:\([a-z]+\)\s*)?years?")
+_DAYS_PATTERN = re.compile(r"(\d{1,3})\s*(?:\([a-z]+\)\s*)?days?")
+
+
+def _clause_risk(clause_type: str, excerpt: str) -> str | None:
+    """Risk note when a clause breaches an approved-template policy limit."""
+    lowered = excerpt.lower()
+    if clause_type == "data_retention":
+        match = _YEARS_PATTERN.search(lowered)
+        if match and int(match.group(1)) > _MAX_RETENTION_YEARS:
+            return (
+                f"The retention period of {match.group(1)} years exceeds the approved "
+                f"policy limit of {_MAX_RETENTION_YEARS} years."
+            )
+    if clause_type == "liability" and ("unlimited" in lowered or "no limitation" in lowered):
+        return "Liability is uncapped, which breaches the approved limitation-of-liability standard."
+    if clause_type == "termination":
+        match = _DAYS_PATTERN.search(lowered)
+        if match and int(match.group(1)) < _MIN_TERMINATION_NOTICE_DAYS:
+            return (
+                f"The termination notice of {match.group(1)} days is below the approved "
+                f"minimum of {_MIN_TERMINATION_NOTICE_DAYS} days."
+            )
+    return None
+
+
+def compare_to_template(clauses: List[Dict[str, Any]], category: str) -> Dict[str, Any]:
+    """Compare extracted clauses against the category's approved template.
+
+    Marks each clause ``standard``/``non-standard`` (with a risk note), lists
+    clause types the template expects but the document lacks, and rolls both
+    up into an overall ``document_risk`` band.
+    """
+    for clause in clauses:
+        risk = _clause_risk(clause["clause_type"], clause.get("excerpt", ""))
+        clause["status"] = "non-standard" if risk else "standard"
+        if risk:
+            clause["risk"] = risk
+
+    expected = _TEMPLATE_EXPECTED_CLAUSES.get(category)
+    found_types = {clause["clause_type"] for clause in clauses}
+    missing = [clause_type for clause_type in (expected or []) if clause_type not in found_types]
+    non_standard = [clause for clause in clauses if clause["status"] == "non-standard"]
+
+    if non_standard:
+        document_risk = "High" if len(non_standard) > 1 else "Medium"
+    elif expected and missing:
+        document_risk = "Medium" if len(missing) >= 3 else "Low"
+    else:
+        document_risk = "Low"
+
+    return {
+        "template": category if expected else None,
+        "template_available": expected is not None,
+        "missing_clauses": missing,
+        "non_standard_clauses": [
+            {"clause_type": clause["clause_type"], "risk": clause.get("risk", ""), "excerpt": clause.get("excerpt", "")}
+            for clause in non_standard
+        ],
+        "document_risk": document_risk,
+    }
+
+
 # ------------------------------------------------------------------ pipeline
 def analyze(text: str) -> Dict[str, Any]:
-    """Full NLP pass over a document: entities + clauses + classification."""
+    """Full NLP pass: entities + clauses + classification + template comparison."""
     from app.services.telemetry import span
 
     with span("nlp.analyze", engine=engine()):
+        clauses = extract_clauses(text)
+        classification = classify_document(text)
         return {
             "engine": engine(),
             "entities": extract_entities(text),
-            "clauses": extract_clauses(text),
-            "classification": classify_document(text),
+            "clauses": clauses,
+            "classification": classification,
+            "template_comparison": compare_to_template(clauses, classification["category"]),
         }
