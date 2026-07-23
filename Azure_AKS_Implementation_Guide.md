@@ -235,21 +235,30 @@ from Key Vault.
 
 ## 8. Secrets & Azure Key Vault
 
-Raw Kubernetes Secrets are fine for a demo; production should source them
-from **Azure Key Vault** via the CSI secrets-store driver:
+`infra/deploy_aks.sh` sources application secrets from **Azure Key Vault**
+via the CSI secrets-store driver by default (`USE_KEY_VAULT=true`). The
+script automates the whole chain:
 
-```bash
-az keyvault create --name kv-investment-banking --resource-group $RESOURCE_GROUP
-az keyvault secret set --vault-name kv-investment-banking --name audit-signing-key --value "$(openssl rand -hex 32)"
-az keyvault secret set --vault-name kv-investment-banking --name azure-openai-api-key --value "<key>"
+1. enables the `azure-keyvault-secrets-provider` AKS addon (managed
+   identity + CSI driver);
+2. creates the vault (`KEY_VAULT_NAME`, default `kv-investment-banking` —
+   names are global, override on collision) and grants the addon identity
+   `get`/`list` secret permissions;
+3. uploads every configured secret (`audit-signing-key`,
+   `local-jwt-secret`, `llm-api-key`, `neo4j-password`, …);
+4. generates and applies a `SecretProviderClass`
+   (`agentic-api-keyvault`; reference copy in
+   `infra/k8s/secretproviderclass.example.yaml`) whose `secretObjects`
+   sync the vault secrets into the `agentic-api-secrets` Kubernetes
+   Secret the Deployment already consumes via `envFrom`;
+5. patches the Deployment with the CSI volume mount — mounting is what
+   triggers the sync, so no application changes are needed.
 
-az aks enable-addons --addons azure-keyvault-secrets-provider \
-  --resource-group $RESOURCE_GROUP --name $AKS_CLUSTER
-```
-
-Then mount the vault with a `SecretProviderClass` and map the secrets into
-the `agentic-api-secrets` Secret consumed by the Deployment's `envFrom`.
-Key rules:
+Rotate a secret with `az keyvault secret set` + a rollout restart; the pod
+re-reads the vault on mount. If any Key Vault step fails (e.g. policy
+restrictions on a free trial), the script logs a warning and falls back to
+a raw Kubernetes Secret; `USE_KEY_VAULT=false` forces that path
+(template: `infra/k8s/secret.example.yaml`). Key rules:
 
 - `AUDIT_SIGNING_KEY` must be strong, rotated, and never the dev default —
   it underwrites the cryptographic audit trail.

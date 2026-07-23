@@ -33,6 +33,11 @@ IMAGE_TAG="${IMAGE_TAG:-latest}"
 ENABLE_MONITORING="${ENABLE_MONITORING:-true}"
 LOG_ANALYTICS_WORKSPACE="${LOG_ANALYTICS_WORKSPACE:-law-investment-banking}"
 APP_INSIGHTS_NAME="${APP_INSIGHTS_NAME:-appi-investment-banking}"
+# Application secrets are sourced from Azure Key Vault via the CSI
+# secrets-store driver by default; set USE_KEY_VAULT=false to fall back to a
+# raw Kubernetes Secret. Vault names are global — override on collision.
+USE_KEY_VAULT="${USE_KEY_VAULT:-true}"
+KEY_VAULT_NAME="${KEY_VAULT_NAME:-kv-investment-banking}"
 
 # Convenience: pull LLM/Neo4j settings from the local .env when not already
 # exported, so the cluster matches the local configuration (GitHub Models
@@ -135,22 +140,120 @@ az aks get-credentials --resource-group "$RESOURCE_GROUP" --name "$AKS_CLUSTER" 
 echo ">> Applying Kubernetes manifests (infra/k8s)"
 kubectl apply -k infra/k8s
 
-echo ">> Creating/updating application secrets"
-SECRET_ARGS=(
-  "--from-literal=AUDIT_SIGNING_KEY=$AUDIT_SIGNING_KEY"
-  "--from-literal=LOCAL_JWT_SECRET=$LOCAL_JWT_SECRET"
-)
-[[ -n "$AZURE_OPENAI_ENDPOINT" ]] && SECRET_ARGS+=("--from-literal=AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT")
-[[ -n "$AZURE_OPENAI_API_KEY" ]] && SECRET_ARGS+=("--from-literal=AZURE_OPENAI_API_KEY=$AZURE_OPENAI_API_KEY")
-[[ -n "$LLM_BASE_URL" ]] && SECRET_ARGS+=("--from-literal=LLM_BASE_URL=$LLM_BASE_URL")
-[[ -n "$LLM_API_KEY" ]] && SECRET_ARGS+=("--from-literal=LLM_API_KEY=$LLM_API_KEY")
-[[ -n "$NEO4J_URI" ]] && SECRET_ARGS+=("--from-literal=NEO4J_URI=$NEO4J_URI")
-[[ -n "$NEO4J_PASSWORD" ]] && SECRET_ARGS+=("--from-literal=NEO4J_PASSWORD=$NEO4J_PASSWORD")
-[[ -n "$APPINSIGHTS_CONNECTION" ]] && SECRET_ARGS+=("--from-literal=APPLICATIONINSIGHTS_CONNECTION_STRING=$APPINSIGHTS_CONNECTION")
-kubectl create secret generic agentic-api-secrets \
-  --namespace agentic-platform \
-  "${SECRET_ARGS[@]}" \
-  --dry-run=client -o yaml | kubectl apply -f -
+# --- Secrets: Azure Key Vault via CSI driver (preferred) ---------------------
+# Uploads each configured secret to Key Vault, generates a SecretProviderClass
+# whose secretObjects sync the vault secrets into the `agentic-api-secrets`
+# Kubernetes Secret the Deployment already consumes via envFrom, and mounts
+# the CSI volume (mounting is what triggers the sync).
+KV_OBJECTS=""
+KV_SECRET_OBJECTS=""
+
+add_kv_secret() {
+  local env_key="$1" kv_name="$2" value="$3"
+  [[ -z "$value" ]] && return 0
+  az keyvault secret set --vault-name "$KEY_VAULT_NAME" \
+    --name "$kv_name" --value "$value" --output none || return 1
+  KV_OBJECTS+="        - |"$'\n'"          objectName: $kv_name"$'\n'"          objectType: secret"$'\n'
+  KV_SECRET_OBJECTS+="      - objectName: $kv_name"$'\n'"        key: $env_key"$'\n'
+}
+
+setup_key_vault() {
+  echo ">> Key Vault secrets-provider addon"
+  if [[ "$(az aks show --resource-group "$RESOURCE_GROUP" --name "$AKS_CLUSTER" \
+      --query 'addonProfiles.azureKeyvaultSecretsProvider.enabled' -o tsv 2>/dev/null)" != "true" ]]; then
+    az aks enable-addons --addons azure-keyvault-secrets-provider \
+      --resource-group "$RESOURCE_GROUP" --name "$AKS_CLUSTER" --output none || return 1
+  fi
+  KV_CLIENT_ID=$(az aks show --resource-group "$RESOURCE_GROUP" --name "$AKS_CLUSTER" \
+    --query 'addonProfiles.azureKeyvaultSecretsProvider.identity.clientId' -o tsv) || return 1
+  TENANT_ID=$(az account show --query tenantId -o tsv) || return 1
+
+  echo ">> Key Vault: $KEY_VAULT_NAME"
+  if ! az keyvault show --name "$KEY_VAULT_NAME" --resource-group "$RESOURCE_GROUP" >/dev/null 2>&1; then
+    # Access-policy mode: the creating user gets full secret permissions
+    # automatically and the addon identity is granted read below — no ARM
+    # role-assignment propagation delays.
+    az keyvault create --name "$KEY_VAULT_NAME" --resource-group "$RESOURCE_GROUP" \
+      --location "$LOCATION" --enable-rbac-authorization false --output none || return 1
+  fi
+  az keyvault set-policy --name "$KEY_VAULT_NAME" --resource-group "$RESOURCE_GROUP" \
+    --secret-permissions get list --spn "$KV_CLIENT_ID" --output none || return 1
+
+  echo ">> Uploading application secrets to Key Vault"
+  add_kv_secret AUDIT_SIGNING_KEY audit-signing-key "$AUDIT_SIGNING_KEY" || return 1
+  add_kv_secret LOCAL_JWT_SECRET local-jwt-secret "$LOCAL_JWT_SECRET" || return 1
+  add_kv_secret AZURE_OPENAI_ENDPOINT azure-openai-endpoint "$AZURE_OPENAI_ENDPOINT" || return 1
+  add_kv_secret AZURE_OPENAI_API_KEY azure-openai-api-key "$AZURE_OPENAI_API_KEY" || return 1
+  add_kv_secret LLM_BASE_URL llm-base-url "$LLM_BASE_URL" || return 1
+  add_kv_secret LLM_API_KEY llm-api-key "$LLM_API_KEY" || return 1
+  add_kv_secret NEO4J_URI neo4j-uri "$NEO4J_URI" || return 1
+  add_kv_secret NEO4J_PASSWORD neo4j-password "$NEO4J_PASSWORD" || return 1
+  add_kv_secret APPLICATIONINSIGHTS_CONNECTION_STRING appinsights-connection-string "$APPINSIGHTS_CONNECTION" || return 1
+
+  echo ">> Applying SecretProviderClass (agentic-api-keyvault)"
+  kubectl apply -f - <<SPC || return 1
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: agentic-api-keyvault
+  namespace: agentic-platform
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"
+    userAssignedIdentityID: "$KV_CLIENT_ID"
+    keyvaultName: "$KEY_VAULT_NAME"
+    tenantId: "$TENANT_ID"
+    objects: |
+      array:
+$KV_OBJECTS
+  secretObjects:
+    - secretName: agentic-api-secrets
+      type: Opaque
+      data:
+$KV_SECRET_OBJECTS
+SPC
+
+  # The CSI driver must own the synced Secret — drop any raw predecessor.
+  kubectl delete secret agentic-api-secrets --namespace agentic-platform --ignore-not-found >/dev/null
+
+  echo ">> Mounting the Key Vault CSI volume on the deployment"
+  kubectl patch deployment agentic-api --namespace agentic-platform --type=strategic -p '{
+    "spec": {"template": {"spec": {
+      "volumes": [{"name": "keyvault-secrets", "csi": {
+        "driver": "secrets-store.csi.k8s.io", "readOnly": true,
+        "volumeAttributes": {"secretProviderClass": "agentic-api-keyvault"}}}],
+      "containers": [{"name": "api", "volumeMounts": [{
+        "name": "keyvault-secrets", "mountPath": "/mnt/secrets-store", "readOnly": true}]}]
+    }}}}' || return 1
+}
+
+if [[ "$USE_KEY_VAULT" == "true" ]]; then
+  if ! setup_key_vault; then
+    echo ">> Key Vault setup failed — falling back to a raw Kubernetes Secret."
+    USE_KEY_VAULT="false"
+  fi
+fi
+
+if [[ "$USE_KEY_VAULT" != "true" ]]; then
+  echo ">> Creating/updating application secrets (raw Kubernetes Secret)"
+  SECRET_ARGS=(
+    "--from-literal=AUDIT_SIGNING_KEY=$AUDIT_SIGNING_KEY"
+    "--from-literal=LOCAL_JWT_SECRET=$LOCAL_JWT_SECRET"
+  )
+  [[ -n "$AZURE_OPENAI_ENDPOINT" ]] && SECRET_ARGS+=("--from-literal=AZURE_OPENAI_ENDPOINT=$AZURE_OPENAI_ENDPOINT")
+  [[ -n "$AZURE_OPENAI_API_KEY" ]] && SECRET_ARGS+=("--from-literal=AZURE_OPENAI_API_KEY=$AZURE_OPENAI_API_KEY")
+  [[ -n "$LLM_BASE_URL" ]] && SECRET_ARGS+=("--from-literal=LLM_BASE_URL=$LLM_BASE_URL")
+  [[ -n "$LLM_API_KEY" ]] && SECRET_ARGS+=("--from-literal=LLM_API_KEY=$LLM_API_KEY")
+  [[ -n "$NEO4J_URI" ]] && SECRET_ARGS+=("--from-literal=NEO4J_URI=$NEO4J_URI")
+  [[ -n "$NEO4J_PASSWORD" ]] && SECRET_ARGS+=("--from-literal=NEO4J_PASSWORD=$NEO4J_PASSWORD")
+  [[ -n "$APPINSIGHTS_CONNECTION" ]] && SECRET_ARGS+=("--from-literal=APPLICATIONINSIGHTS_CONNECTION_STRING=$APPINSIGHTS_CONNECTION")
+  kubectl create secret generic agentic-api-secrets \
+    --namespace agentic-platform \
+    "${SECRET_ARGS[@]}" \
+    --dry-run=client -o yaml | kubectl apply -f -
+fi
 
 echo ">> Pointing the deployment at the built image"
 kubectl set image deployment/agentic-api api="$IMAGE_REF" --namespace agentic-platform

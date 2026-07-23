@@ -104,6 +104,11 @@ blocked — stop the cluster with `az aks stop` when idle).
 
 Kubernetes manifests live in `infra/k8s/` (namespace, ConfigMap,
 hardened Deployment, LoadBalancer Service, HPA, secret template).
+Application secrets are sourced from **Azure Key Vault** via the CSI
+secrets-store driver by default — `deploy_aks.sh` provisions the vault,
+uploads the secrets, and syncs them into the pod through a generated
+`SecretProviderClass` (guide §8); `USE_KEY_VAULT=false` falls back to a
+raw Kubernetes Secret.
 
 ## Evaluation
 
