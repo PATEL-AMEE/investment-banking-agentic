@@ -45,6 +45,9 @@ def _tokens(text: str) -> List[str]:
 # ----------------------------------------------------------------- metrics
 def faithfulness(answer: str, contexts: List[str]) -> float:
     """Fraction of answer sentences supported by at least one context."""
+    # Citation markers like [POL-AML-01] are pointers, not claims — strip
+    # them so they are neither scored as sentences nor counted as tokens.
+    answer = re.sub(r"\[[A-Za-z0-9_-]+\]", " ", answer)
     sentences = [s for s in _SENTENCE_SPLIT.split(answer) if _tokens(s)]
     if not sentences:
         return 0.0

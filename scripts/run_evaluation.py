@@ -15,7 +15,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+load_dotenv()  # evaluate against the configured LLM provider, as the API does
 
 from app.eval.harness import load_golden_dataset, run_evaluation  # noqa: E402
 from app.services.graph_store import GraphStore  # noqa: E402

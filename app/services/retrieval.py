@@ -24,6 +24,11 @@ _FALLBACK = [
     {"source_id": "POL-AML-01", "excerpt": "Enhanced customer due diligence is required for high-risk profiles."}
 ]
 
+# Relevance cutoff: drop hits scoring below this fraction of the best hit's
+# score. Relative (not absolute) so it works for both cosine scores from the
+# in-memory store and RRF-scale scores from Azure AI Search hybrid ranking.
+_MIN_RELATIVE_SCORE = 0.5
+
 
 def _new_vector_store() -> Any:
     """Azure AI Search when configured; local in-memory store otherwise."""
@@ -126,6 +131,11 @@ class GraphRAGRetriever:
     def retrieve(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
         self._ensure_index()
         hits = self.vector_store.search(query, k=k)
+        # Trim the weak tail: keep the top hit, drop hits far below it so
+        # off-topic excerpts neither dilute precision nor feed the LLM.
+        if hits:
+            floor = (hits[0].get("score") or 0.0) * _MIN_RELATIVE_SCORE
+            hits = [h for h in hits if (h.get("score") or 0.0) >= floor] or hits[:1]
         citations: List[Dict[str, Any]] = []
         for hit in hits:
             citation = {
