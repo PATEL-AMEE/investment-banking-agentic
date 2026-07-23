@@ -43,6 +43,11 @@ PERM_REVIEWS_READ = "reviews.read"
 PERM_REVIEWS_RESOLVE = "reviews.resolve"
 PERM_AUDIT_READ = "audit.read"
 PERM_DASHBOARD_READ = "dashboard.read"
+# Client-facing surface: submit an application and read one's OWN status.
+# Resource scoping (own client_id only) is enforced at the endpoint on top
+# of these role permissions.
+PERM_APPLICATION_SUBMIT = "application.submit"
+PERM_APPLICATION_STATUS = "application.status.read"
 
 _ANALYST_SURFACE: FrozenSet[str] = frozenset(
     {
@@ -70,12 +75,20 @@ ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
             PERM_COPILOT_QUERY,
             PERM_DOCUMENTS_UPLOAD,
             PERM_DASHBOARD_READ,
+            PERM_APPLICATION_STATUS,
         }
     ),
     "risk_manager": _ANALYST_SURFACE
-    | frozenset({PERM_CLIENT_PROFILE, PERM_ONBOARDING_KYC, PERM_REVIEWS_RESOLVE, PERM_EVAL_RUN}),
+    | frozenset(
+        {PERM_CLIENT_PROFILE, PERM_ONBOARDING_KYC, PERM_REVIEWS_RESOLVE, PERM_EVAL_RUN, PERM_APPLICATION_STATUS}
+    ),
     "executive": frozenset({PERM_DASHBOARD_READ, PERM_AUDIT_READ, PERM_REVIEWS_READ}),
     "service_agent": frozenset({PERM_MCP_CALL, PERM_AGENTS_ASK, PERM_COPILOT_QUERY, PERM_SANCTIONS_CHECK}),
+    # External client (the bank's customer): the trigger for the onboarding
+    # chain, but completely outside the internal staff tools. They can submit
+    # and check their own status — never risk scores, screening results,
+    # regulation citations, or internal reasoning.
+    "client": frozenset({PERM_APPLICATION_SUBMIT, PERM_APPLICATION_STATUS}),
 }
 
 # Legacy / Azure AD app-role names mapped onto the canonical roles so existing

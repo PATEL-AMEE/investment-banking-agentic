@@ -30,7 +30,14 @@ def auth_required() -> bool:
     return os.getenv("REQUIRE_AUTH", "false").lower() == "true"
 
 
-def issue_token(username: str, roles: List[str] | None = None, expires_minutes: int = 60) -> str:
+def issue_token(
+    username: str,
+    roles: List[str] | None = None,
+    expires_minutes: int = 60,
+    extra_claims: Dict[str, Any] | None = None,
+) -> str:
+    """Issue a signed token; ``extra_claims`` carries resource-scoping claims
+    such as ``client_id`` for client-portal tokens (own-record access only)."""
     now = int(time.time())
     claims = {
         "sub": username,
@@ -40,6 +47,8 @@ def issue_token(username: str, roles: List[str] | None = None, expires_minutes: 
         "iat": now,
         "exp": now + expires_minutes * 60,
     }
+    if extra_claims:
+        claims.update(extra_claims)
     return jwt.encode(claims, _secret(), algorithm=_ALGORITHM)
 
 

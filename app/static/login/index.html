@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agentic AI Platform — Sign in</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:#f4f6f9; --surface:#fff; --surface-2:#fafbfc;
+    --ink:#0e1217; --ink-2:#51565e; --muted:#8a8f98;
+    --grid:#e6e9ee; --hair:rgba(14,18,23,.10);
+    --accent:#2a78d6; --accent-soft:#eaf2fc;
+    --critical:#d03b3b; --crit-bg:rgba(208,59,59,.12);
+    --radius:14px; --shadow:0 1px 2px rgba(14,18,23,.04),0 4px 16px rgba(14,18,23,.05);
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+  }
+  @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
+    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#17273b; --crit-bg:rgba(208,59,59,.20);
+  }}
+  :root[data-theme="dark"]{
+    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
+    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#17273b; --crit-bg:rgba(208,59,59,.20);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{width:100%;max-width:460px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px}
+  h1{font-size:22px;font-weight:680;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{margin:0 0 22px;color:var(--ink-2);font-size:13.5px}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:0 0 6px}
+  input[type=text]{font:inherit;font-size:14px;width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .roles{display:grid;gap:8px;margin:18px 0 22px}
+  .role{display:flex;gap:11px;align-items:flex-start;border:1px solid var(--hair);border-radius:10px;padding:11px 13px;cursor:pointer;background:var(--surface-2)}
+  .role:hover{border-color:var(--accent)}
+  .role input{margin-top:3px;accent-color:var(--accent)}
+  .role.sel{border-color:var(--accent);background:var(--accent-soft)}
+  .role b{font-size:13.5px}
+  .role small{display:block;color:var(--muted);font-size:12px;line-height:1.4}
+  button.pri{font:inherit;font-weight:600;font-size:14px;width:100%;padding:11px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+  button.pri:disabled{opacity:.5;cursor:default}
+  .error{display:none;margin-top:14px;padding:10px 13px;border-radius:9px;background:var(--crit-bg);color:var(--critical);font-size:13px}
+  footer{margin-top:18px;font-size:11.5px;color:var(--muted);text-align:center}
+  footer code{font-family:var(--mono)}
+</style>
+</head>
+<body>
+<form class="card" id="loginForm">
+  <h1>🔐 Sign in</h1>
+  <p class="sub">Investment Banking Agentic AI Platform · role-based access</p>
+
+  <label for="username">Username</label>
+  <input type="text" id="username" placeholder="e.g. a.patel" required autocomplete="username">
+
+  <div class="roles" id="roles">
+    <label class="role sel"><input type="radio" name="role" value="compliance_analyst" checked>
+      <span><b>Compliance Analyst</b><small>Compliance inspections, copilot Q&amp;A, sanctions, NLP, audit trail</small></span></label>
+    <label class="role"><input type="radio" name="role" value="onboarding_officer">
+      <span><b>Onboarding Officer</b><small>KYC/AML onboarding, client profiling, sanctions screening</small></span></label>
+    <label class="role"><input type="radio" name="role" value="risk_manager">
+      <span><b>Risk Manager</b><small>Full analyst surface plus review approvals and evaluation runs</small></span></label>
+    <label class="role"><input type="radio" name="role" value="executive">
+      <span><b>Executive (CTO/CRO)</b><small>View-only: dashboards, audit trail, review queue — no agent/LLM calls</small></span></label>
+  </div>
+
+  <button class="pri" id="submit" type="submit">Sign in</button>
+  <div class="error" id="error"></div>
+
+  <footer>Dev sign-in issues a local JWT via <code>POST /api/auth/token</code>.<br>
+  In production this page is replaced by Azure AD single sign-on.</footer>
+</form>
+
+<script>
+(function () {
+  const form = document.getElementById("loginForm");
+  const errorEl = document.getElementById("error");
+  const submitBtn = document.getElementById("submit");
+  const rolesEl = document.getElementById("roles");
+
+  rolesEl.addEventListener("change", () => {
+    rolesEl.querySelectorAll(".role").forEach((el) => {
+      el.classList.toggle("sel", el.querySelector("input").checked);
+    });
+  });
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorEl.style.display = "none";
+    submitBtn.disabled = true;
+    const username = document.getElementById("username").value.trim();
+    const role = rolesEl.querySelector("input:checked").value;
+    try {
+      const response = await fetch("/api/auth/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, roles: [role] }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Sign-in failed");
+      sessionStorage.setItem("ib_token", data.access_token);
+      sessionStorage.setItem("ib_user", username);
+      sessionStorage.setItem("ib_roles", JSON.stringify(data.roles || [role]));
+      const next = new URLSearchParams(location.search).get("next");
+      location.href = next && next.startsWith("/") ? next : "/chat";
+    } catch (err) {
+      errorEl.textContent = String(err.message || err);
+      errorEl.style.display = "block";
+      submitBtn.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

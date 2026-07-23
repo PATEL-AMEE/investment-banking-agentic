@@ -61,6 +61,21 @@ except Exception:
     # best-effort; static files may not exist in some environments
     pass
 
+# Shared static assets (auth.js session helper used by every UI page)
+try:
+    app.mount("/static", StaticFiles(directory=BASE_DIR / "static"), name="static")
+except Exception:
+    pass
+
+
+@app.get("/login")
+def login_page() -> FileResponse:
+    """Serve the sign-in page (dev JWT; Azure AD replaces this in prod)."""
+    index_path = BASE_DIR / "static" / "login" / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Login UI not available")
+    return FileResponse(index_path)
+
 
 @app.get("/reviewer")
 def reviewer_page() -> FileResponse:
@@ -423,6 +438,91 @@ def client_profile(client_id: str, current_user: dict = Depends(require_client_p
         return run_client_profiling(client_id, store)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+# ------------------------------------------------------------- client portal
+# The client is a separate, much more limited actor: they submit through the
+# intake form and check their OWN status — never the internal detail.
+
+class ClientApplication(BaseModel):
+    companyName: str
+    jurisdiction: str = "GB"
+    product: str = "Corporate account"
+    beneficialOwners: list[Dict[str, Any]] = []
+    documentsProvided: list[str] = []
+    documentText: Optional[str] = None
+
+
+@app.post("/api/client/apply")
+def client_apply(req: ClientApplication) -> Dict[str, Any]:
+    """Client intake: submission triggers the whole onboarding chain.
+
+    Runs the onboarding agent (sanctions/PEP screening, risk scoring,
+    review escalation) plus NLP over any supplied documents — all outputs
+    stay internal. The response is the client-safe view plus a token scoped
+    to this client's own records (``client`` role + ``client_id`` claim).
+    """
+    from app.services import applications
+
+    record = applications.submit_application(
+        company_name=req.companyName,
+        jurisdiction=req.jurisdiction,
+        product=req.product,
+        beneficial_owners=req.beneficialOwners,
+        documents_provided=req.documentsProvided,
+        document_text=req.documentText,
+        store=store,
+        audit_log=audit_log,
+    )
+    token = issue_token(
+        f"client:{req.companyName}",
+        ["client"],
+        extra_claims={"client_id": record["client_id"]},
+    )
+    view = applications.client_view(record, store)
+    view["accessToken"] = token
+    return view
+
+
+require_application_status = require_permission(rbac.PERM_APPLICATION_STATUS)
+
+
+@app.get("/api/client/status/{application_id}")
+def client_status(application_id: str, current_user: dict = Depends(require_application_status)) -> Dict[str, Any]:
+    """Own-record status check: plain-language status only.
+
+    Resource scoping on top of the role permission: a client token may only
+    read applications belonging to its own ``client_id`` claim. Staff roles
+    with broader read rights (risk_manager, compliance_analyst) may look up
+    any application; the response shape is still the client-safe view.
+    """
+    from app.services import applications
+
+    record = applications.get_application(application_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="Application not found")
+    token_client_id = current_user.get("client_id")
+    if token_client_id and token_client_id != record["client_id"]:
+        # A client token for a different company: deny and audit.
+        audit_log.record(
+            event_type="rbac_check",
+            actor_id=str(current_user.get("sub", "user-unknown")),
+            action="resource:application.status.read",
+            result="denied",
+            resource_id=application_id,
+            metadata={"reason": "application belongs to a different client"},
+        )
+        raise HTTPException(status_code=403, detail="You may only view your own application")
+    return applications.client_view(record, store)
+
+
+@app.get("/client")
+def client_portal_page() -> FileResponse:
+    """Serve the client-facing intake/status portal."""
+    index_path = BASE_DIR / "static" / "client" / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Client portal not available")
+    return FileResponse(index_path)
 
 
 @app.get("/api/reviews/pending", response_model=list[ReviewTask])

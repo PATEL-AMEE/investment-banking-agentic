@@ -106,6 +106,7 @@
   @media (max-width:940px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
   @media (max-width:520px){.kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
+<script src="/static/auth.js"></script>
 </head>
 <body>
 <div class="wrap">
@@ -116,6 +117,7 @@
     </div>
     <div class="tags">
       <span class="badge live"><span class="dot"></span>Live data</span>
+      <span class="tags" id="authslot"></span>
       <a class="btn" href="/chat" style="text-decoration:none">💬 Chat</a>
       <button class="btn" id="refresh" type="button">↻ Refresh</button>
       <button class="btn" id="theme" type="button">◐ Theme</button>

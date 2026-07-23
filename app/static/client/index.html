@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Open a Corporate Account</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:#f4f6f9; --surface:#fff; --surface-2:#fafbfc;
+    --ink:#0e1217; --ink-2:#51565e; --muted:#8a8f98;
+    --grid:#e6e9ee; --hair:rgba(14,18,23,.10);
+    --accent:#2a78d6; --accent-soft:#eaf2fc;
+    --good:#0ca30c; --good-bg:rgba(12,163,12,.12);
+    --warning:#d98a00; --warn-bg:rgba(217,138,0,.14);
+    --critical:#d03b3b; --crit-bg:rgba(208,59,59,.12);
+    --radius:14px; --shadow:0 1px 2px rgba(14,18,23,.04),0 4px 16px rgba(14,18,23,.05);
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
+    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#17273b;
+    --good-bg:rgba(12,163,12,.20); --warn-bg:rgba(217,138,0,.20); --crit-bg:rgba(208,59,59,.20);
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:640px;margin:0 auto;padding:34px 20px 40px}
+  h1{font-size:clamp(21px,3vw,27px);font-weight:680;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{margin:0 0 26px;color:var(--ink-2);font-size:14px}
+  .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:18px}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:14px 0 5px}
+  label:first-child{margin-top:0}
+  input[type=text],select,textarea{font:inherit;font-size:14px;width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
+  textarea{resize:vertical;min-height:70px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  .docs{display:grid;gap:7px;margin-top:4px}
+  .doc{display:flex;gap:9px;align-items:center;font-size:13.5px;color:var(--ink-2);border:1px solid var(--hair);border-radius:9px;padding:9px 12px;background:var(--surface-2);cursor:pointer}
+  .doc input{accent-color:var(--accent)}
+  button.pri{font:inherit;font-weight:600;font-size:14.5px;width:100%;margin-top:20px;padding:12px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+  button.pri:disabled{opacity:.5;cursor:default}
+  .error{display:none;margin-top:14px;padding:10px 13px;border-radius:9px;background:var(--crit-bg);color:var(--critical);font-size:13px}
+
+  /* status tracker */
+  .steps{display:flex;gap:0;margin:20px 0 18px}
+  .step{flex:1;text-align:center;position:relative;font-size:11.5px;color:var(--muted)}
+  .step .dot{width:26px;height:26px;border-radius:50%;background:var(--surface-2);border:2px solid var(--grid);margin:0 auto 6px;display:flex;align-items:center;justify-content:center;font-size:12px}
+  .step::before{content:"";position:absolute;top:13px;left:-50%;width:100%;height:2px;background:var(--grid);z-index:-1}
+  .step:first-child::before{display:none}
+  .step.done .dot{background:var(--accent);border-color:var(--accent);color:#fff}
+  .step.done{color:var(--ink-2)}
+  .step.now .dot{border-color:var(--accent);color:var(--accent);font-weight:700}
+  .step.now{color:var(--accent);font-weight:600}
+  .status-msg{border-radius:10px;padding:14px 16px;font-size:14px}
+  .status-msg.under_review{background:var(--warn-bg);color:var(--warning)}
+  .status-msg.approved{background:var(--good-bg);color:var(--good)}
+  .status-msg.declined{background:var(--crit-bg);color:var(--critical)}
+  .status-msg.additional_documents_needed,.status-msg.received{background:var(--accent-soft);color:var(--accent)}
+  .outstanding{margin:14px 0 0;padding:0 0 0 4px;list-style:none}
+  .outstanding li{font-size:13.5px;color:var(--ink-2);padding:6px 0;border-bottom:1px solid var(--grid)}
+  .outstanding li::before{content:"📄 ";margin-right:4px}
+  .meta{font-size:12px;color:var(--muted);margin-top:14px}
+  .rowbtns{display:flex;gap:9px;margin-top:18px}
+  .btn{font:inherit;font-size:13px;flex:1;padding:9px;border-radius:9px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2);cursor:pointer}
+  .btn:hover{color:var(--ink)}
+  footer{font-size:11.5px;color:var(--muted);text-align:center;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🏦 Open a Corporate Account</h1>
+  <p class="sub">Submit your application below. You can check its status here at any time.</p>
+
+  <!-- intake form -->
+  <form class="card" id="intake">
+    <label for="company">Company name</label>
+    <input type="text" id="company" placeholder="e.g. ABC Global Holdings Ltd" required>
+
+    <label for="jurisdiction">Country of incorporation</label>
+    <select id="jurisdiction">
+      <option value="GB">United Kingdom</option><option value="US">United States</option>
+      <option value="IE">Ireland</option><option value="DE">Germany</option>
+      <option value="FR">France</option><option value="KY">Cayman Islands</option>
+      <option value="SG">Singapore</option><option value="CH">Switzerland</option>
+    </select>
+
+    <label for="product">Requested product</label>
+    <select id="product">
+      <option>Corporate account</option><option>Trading & custody</option>
+      <option>FX & payments</option><option>Advisory mandate</option>
+    </select>
+
+    <label for="owners">Beneficial owners (one per line — name, country)</label>
+    <textarea id="owners" placeholder="Jane Smith, GB&#10;John Doe, US"></textarea>
+
+    <label>Documents you are providing</label>
+    <div class="docs" id="docs">
+      <label class="doc"><input type="checkbox" value="certificate_of_incorporation">Certificate of incorporation</label>
+      <label class="doc"><input type="checkbox" value="proof_of_registered_address">Proof of registered business address</label>
+      <label class="doc"><input type="checkbox" value="source_of_funds_declaration">Source-of-funds declaration</label>
+      <label class="doc"><input type="checkbox" value="beneficial_ownership_evidence">Beneficial ownership documentation</label>
+    </div>
+
+    <label for="doctext">Paste key document text (optional)</label>
+    <textarea id="doctext" placeholder="Paste relevant agreement or incorporation text for faster processing"></textarea>
+
+    <button class="pri" id="submitBtn" type="submit">Submit application</button>
+    <div class="error" id="error"></div>
+  </form>
+
+  <!-- status tracker (hidden until an application exists) -->
+  <div class="card" id="statusCard" style="display:none">
+    <h1 style="font-size:18px" id="stTitle">Application status</h1>
+    <div class="steps" id="steps">
+      <div class="step" data-s="received"><div class="dot">1</div>Received</div>
+      <div class="step" data-s="screening"><div class="dot">2</div>Screening</div>
+      <div class="step" data-s="review"><div class="dot">3</div>Review</div>
+      <div class="step" data-s="decision"><div class="dot">4</div>Decision</div>
+    </div>
+    <div class="status-msg" id="stMsg"></div>
+    <ul class="outstanding" id="stDocs"></ul>
+    <div class="meta" id="stMeta"></div>
+    <div class="rowbtns">
+      <button class="btn" id="refreshBtn" type="button">↻ Check status</button>
+      <button class="btn" id="newBtn" type="button">Start a new application</button>
+    </div>
+  </div>
+
+  <footer>Your application is processed by our automated onboarding checks and, where needed, reviewed by our team.</footer>
+</div>
+
+<script>
+(function () {
+  const form = document.getElementById("intake");
+  const statusCard = document.getElementById("statusCard");
+  const errorEl = document.getElementById("error");
+  const submitBtn = document.getElementById("submitBtn");
+
+  const K_TOKEN = "client_token", K_APP = "client_app_id", K_CO = "client_company";
+
+  function stepIndex(status) {
+    // received=0 screening=1 review=2 decision=3
+    if (status === "approved" || status === "declined") return 3;
+    if (status === "under_review") return 2;
+    return 1; // received / additional docs => screening stage
+  }
+
+  function renderStatus(view) {
+    form.style.display = "none";
+    statusCard.style.display = "block";
+    document.getElementById("stTitle").textContent =
+      "Application " + view.applicationId + " · " + view.company;
+    const idx = stepIndex(view.status);
+    document.querySelectorAll(".step").forEach((el, i) => {
+      el.classList.toggle("done", i < idx || (i === 3 && idx === 3));
+      el.classList.toggle("now", i === idx && idx < 3);
+      if (i === 3 && idx === 3) el.querySelector(".dot").textContent = view.status === "approved" ? "✓" : "✕";
+    });
+    const msg = document.getElementById("stMsg");
+    msg.className = "status-msg " + view.status;
+    msg.textContent = view.message;
+    const docs = document.getElementById("stDocs");
+    docs.textContent = "";
+    (view.outstandingDocuments || []).forEach((d) => {
+      const li = document.createElement("li");
+      li.textContent = d;
+      docs.appendChild(li);
+    });
+    document.getElementById("stMeta").textContent =
+      "Submitted " + new Date(view.submittedAt).toLocaleString() + " · " + view.product;
+  }
+
+  async function checkStatus() {
+    const token = sessionStorage.getItem(K_TOKEN);
+    const appId = sessionStorage.getItem(K_APP);
+    if (!token || !appId) return false;
+    try {
+      const response = await fetch("/api/client/status/" + appId, {
+        headers: { Authorization: "Bearer " + token },
+      });
+      if (!response.ok) return false;
+      renderStatus(await response.json());
+      return true;
+    } catch (e) { return false; }
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorEl.style.display = "none";
+    submitBtn.disabled = true;
+    const owners = document.getElementById("owners").value.trim().split("\n")
+      .map((line) => line.trim()).filter(Boolean)
+      .map((line) => {
+        const [name, country] = line.split(",").map((s) => s.trim());
+        return { name: name, country: country || "" };
+      });
+    const docs = Array.from(document.querySelectorAll("#docs input:checked")).map((el) => el.value);
+    try {
+      const response = await fetch("/api/client/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          companyName: document.getElementById("company").value.trim(),
+          jurisdiction: document.getElementById("jurisdiction").value,
+          product: document.getElementById("product").value,
+          beneficialOwners: owners,
+          documentsProvided: docs,
+          documentText: document.getElementById("doctext").value.trim() || null,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Submission failed");
+      sessionStorage.setItem(K_TOKEN, data.accessToken);
+      sessionStorage.setItem(K_APP, data.applicationId);
+      sessionStorage.setItem(K_CO, data.company);
+      delete data.accessToken;
+      renderStatus(data);
+    } catch (err) {
+      errorEl.textContent = String(err.message || err);
+      errorEl.style.display = "block";
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+
+  document.getElementById("refreshBtn").addEventListener("click", checkStatus);
+  document.getElementById("newBtn").addEventListener("click", () => {
+    sessionStorage.removeItem(K_TOKEN);
+    sessionStorage.removeItem(K_APP);
+    sessionStorage.removeItem(K_CO);
+    statusCard.style.display = "none";
+    form.style.display = "block";
+    form.reset();
+  });
+
+  // Returning client: show their application status straight away.
+  checkStatus();
+})();
+</script>
+</body>
+</html>

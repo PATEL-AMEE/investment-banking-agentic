@@ -5,11 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Reviewer Dashboard</title>
     <link rel="stylesheet" href="/reviewer/static/styles.css" />
+    <script src="/static/auth.js"></script>
   </head>
   <body>
     <div class="container">
       <header>
         <h1>Reviewer Dashboard</h1>
+        <div id="authslot" style="display:flex;gap:8px;align-items:center"></div>
         <div class="token-entry">
           <label>Auth token (paste JWT for Azure mode):</label>
           <input id="authToken" placeholder="paste token here" />
