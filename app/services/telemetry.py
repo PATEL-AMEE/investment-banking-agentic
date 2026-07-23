@@ -60,6 +60,22 @@ _provider = TracerProvider(resource=Resource.create({"service.name": "ib-agentic
 _provider.add_span_processor(SimpleSpanProcessor(_ring))
 if os.getenv("OTEL_CONSOLE", "").lower() == "true":
     _provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
+
+# Azure Monitor / Application Insights export (cloud observability).
+# Enabled automatically when APPLICATIONINSIGHTS_CONNECTION_STRING is set
+# (Azure Container Apps deployment); local runs stay local-only.
+_appinsights = os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING", "")
+if _appinsights:
+    try:
+        from azure.monitor.opentelemetry.exporter import AzureMonitorTraceExporter
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor
+
+        _provider.add_span_processor(
+            BatchSpanProcessor(AzureMonitorTraceExporter(connection_string=_appinsights))
+        )
+    except Exception:  # exporter not installed / bad connection string
+        pass
+
 trace.set_tracer_provider(_provider)
 
 tracer = trace.get_tracer("ib.agents")
