@@ -6,7 +6,7 @@ load_dotenv()  # .env holds LLM/Azure/Neo4j credentials (gitignored)
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -187,6 +187,12 @@ class ReviewDecision(BaseModel):
     decision: str
     reviewer: str
     notes: str | None = None
+
+
+@app.get("/", include_in_schema=False)
+def root() -> RedirectResponse:
+    """Landing on the bare URL should show the dashboard, not a 404."""
+    return RedirectResponse(url="/dashboard")
 
 
 @app.get("/health")
