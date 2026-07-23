@@ -7,3 +7,4 @@ data/sanctions/
 data/audit/
 infra/k8s/secret.yaml
 data/eval/results/
+azure-credentials-gh.json
