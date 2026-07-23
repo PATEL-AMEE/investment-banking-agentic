@@ -28,10 +28,29 @@ jobs:
         env:
           LLM_MODE: mock
 
-  deploy:
-    # Deploy only on pushes to the default branch, never on PRs.
+  # The secrets context is unavailable in job-level `if`, so a tiny gate job
+  # exposes whether AZURE_CREDENTIALS is configured; deploy skips cleanly
+  # (no red X) on forks/fresh clones that haven't set up Azure yet.
+  check-azure-credentials:
     if: github.event_name == 'push'
-    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      configured: ${{ steps.creds.outputs.configured }}
+    steps:
+      - id: creds
+        run: |
+          if [ -n "${{ secrets.AZURE_CREDENTIALS }}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "AZURE_CREDENTIALS secret not set — skipping deploy job."
+          fi
+
+  deploy:
+    # Deploy only on pushes to the default branch, never on PRs, and only
+    # when the repository has Azure credentials configured.
+    if: github.event_name == 'push' && needs.check-azure-credentials.outputs.configured == 'true'
+    needs: [test, check-azure-credentials]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
