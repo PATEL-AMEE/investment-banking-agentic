@@ -225,17 +225,30 @@
     msg.appendChild(fb);
   }
 
+  // Friendly label + severity for a raw guardrail flag from the API.
+  function guardrailPill(flag) {
+    if (flag === "out_of_scope") return { label: "⛔ Out of scope", cls: "pill warn" };
+    if (flag === "prompt_injection") return { label: "🛡️ Injection blocked", cls: "pill crit" };
+    if (flag.indexOf("pii_masked:") === 0) return { label: "🔒 PII masked · " + flag.split(":")[1], cls: "pill" };
+    return { label: flag, cls: "pill warn" };
+  }
+
   function renderResult(msg, data, query) {
     msg.textContent = "";
+    const addGuardrails = (routes, crit) =>
+      (data.guardrails || []).forEach((g) => {
+        const p = guardrailPill(g);
+        routes.appendChild(el("span", crit ? "pill crit" : p.cls, p.label));
+      });
     if (data.routed_to && data.routed_to.length) {
       const routes = el("div", "routes");
       data.routed_to.forEach((r) => routes.appendChild(el("span", "pill", r)));
       (data.denied || []).forEach((r) => routes.appendChild(el("span", "pill crit", r + " · denied")));
-      (data.guardrails || []).forEach((g) => routes.appendChild(el("span", "pill warn", g)));
+      addGuardrails(routes, false);
       msg.appendChild(routes);
     } else if (data.guardrails && data.guardrails.length) {
       const routes = el("div", "routes");
-      data.guardrails.forEach((g) => routes.appendChild(el("span", "pill crit", g)));
+      addGuardrails(routes, true);
       msg.appendChild(routes);
     }
     msg.appendChild(el("div", "answer", data.answer || "(no answer)"));

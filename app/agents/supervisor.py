@@ -294,13 +294,23 @@ def _aggregate(state: SupervisorState) -> Dict[str, Any]:
     }
     if copilot.get("citations"):
         result["citations"] = copilot["citations"]
+    # Surface the copilot's scope boundary at the top level so the UI/caller
+    # sees it without digging into sections.
+    if copilot.get("out_of_scope"):
+        result["out_of_scope"] = True
     if state["denied_intents"]:
         result["denied"] = state["denied_intents"]
         result["all_denied"] = not state["allowed_intents"]
     if state["routing_notes"]:
         result["routing_notes"] = state["routing_notes"]
-    if state["guard"]["flags"]:
-        result["guardrails"] = state["guard"]["flags"]
+    # Merge the supervisor's own guard flags with the copilot's (e.g.
+    # ``out_of_scope``) so every guardrail action shows on one list.
+    guard_flags = list(state["guard"]["flags"])
+    for flag in copilot.get("guardrails", []):
+        if flag not in guard_flags:
+            guard_flags.append(flag)
+    if guard_flags:
+        result["guardrails"] = guard_flags
 
     audit_log.record(
         event_type="supervisor_route",
