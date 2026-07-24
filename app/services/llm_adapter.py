@@ -86,7 +86,20 @@ class LLMAdapter:
         if provider == "azure":
             url = f"{self.azure_endpoint}/openai/deployments/{self.azure_deployment}/chat/completions?api-version={self.azure_api_version}"
             headers = {"api-key": self.azure_key}
-            payload: Dict[str, Any] = {"messages": messages, "temperature": temperature, "max_tokens": max_tokens}
+            payload: Dict[str, Any] = {"messages": messages}
+            # gpt-5 / o-series ("reasoning") deployments changed the contract:
+            # they use ``max_completion_tokens`` and only accept the default
+            # temperature. Classic (gpt-4o etc.) deployments keep ``max_tokens``
+            # + a custom temperature. Detect by deployment name so both work.
+            dep = self.azure_deployment.lower()
+            if dep.startswith(("gpt-5", "o1", "o3", "o4")):
+                # Reasoning models spend hidden reasoning tokens before the
+                # visible answer, and those also count against the budget. Add
+                # headroom so short compliance answers aren't truncated to empty.
+                payload["max_completion_tokens"] = max_tokens + 1024
+            else:
+                payload["max_tokens"] = max_tokens
+                payload["temperature"] = temperature
         elif provider == "vertex":
             url, headers, payload = self._vertex_request(messages, temperature, max_tokens)
         elif provider == "openai-compatible":

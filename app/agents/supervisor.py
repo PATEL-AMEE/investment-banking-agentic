@@ -379,10 +379,13 @@ def run_supervisor(
     text: str | None = None,
     request_id: str | None = None,
 ) -> Dict[str, Any]:
-    from app.services.telemetry import span
+    from app.services.telemetry import current_trace_id, span
 
     request_id = request_id or f"SUP-{uuid.uuid4().hex[:8]}"
     with span("agent.supervisor", request_id=request_id, user_id=user_id):
+        # Captured inside the span so it's the request's real trace id — the
+        # same id stamped on every audit event this request emits.
+        trace_id = current_trace_id()
         final_state = get_supervisor_agent().invoke(
             {
                 "query": query,
@@ -396,4 +399,8 @@ def run_supervisor(
                 "request_id": request_id,
             }
         )
-    return final_state["result"]
+    result = final_state["result"]
+    if isinstance(result, dict):
+        result.setdefault("requestId", request_id)
+        result.setdefault("traceId", trace_id)
+    return result

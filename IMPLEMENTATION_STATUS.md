@@ -22,6 +22,24 @@ external infra/data not available here · 📄 process/doc, no code.
 | 9 — Evaluation & QA | ✅ | `app/eval/harness.py`, `/api/eval/run` (faithfulness, hallucination, relevancy, precision/recall). RAGAS-judged pass behind `EVAL_ENGINE=ragas`. Feedback regression loop now folded in. |
 | 10 — Deployment & rollout | 🟡 / ⛔ | Manifests + `deploy*.sh` exist; actual rollout needs the Phase 2 cluster and a pilot cohort. |
 
+## Request-level tracing (this pass)
+
+Distributed tracing across the multi-agent pipeline — see [`docs/tracing.md`](docs/tracing.md).
+
+- **One trace id per request, nested across the fan-out.** Every hop
+  (supervisor → MCP `tools/call` → worker agent → NLP/LLM/retrieval) is an
+  OpenTelemetry span under a single trace; verified in `tests/test_tracing.py`.
+- **Audit ↔ trace correlation.** `AuditLog.record` auto-stamps the active
+  `trace_id`, so a compliance entry and the performance waterfall for the same
+  request join on one id (`audit_log.list(trace_id=...)`).
+- **Waterfall API.** `GET /api/telemetry/traces` (recent requests) and
+  `GET /api/telemetry/trace/{id}` (per-step latency + correlated audit events);
+  `run_supervisor` and `POST /api/agents/ask` now return `traceId`/`requestId`.
+  All `/api/telemetry/*` are role-restricted (`dashboard.read`, Phase 7).
+- **Cloud export** stays env-gated (🟡): Azure Monitor via
+  `APPLICATIONINSIGHTS_CONNECTION_STRING` (Phase 2), LangSmith agent-graph
+  tracing via `LANGCHAIN_TRACING_V2=true` (Phase 5).
+
 ## What was just added in code (this pass)
 
 - **Phase 6b.5 — client status notifications.** `app/services/notifications.py`

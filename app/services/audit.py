@@ -100,6 +100,14 @@ class AuditLog:
         for key, value in (metadata or {}).items():
             clean_metadata[key] = mask_pii(value)[0] if isinstance(value, str) else value
 
+        # Correlate the compliance record with the engineering trace: if this
+        # event is emitted inside an active request span, stamp its trace id so
+        # an auditor's "why" and an SRE's "how fast/where it failed" can be
+        # joined by a single id. None when recorded outside any trace.
+        from app.services.telemetry import current_trace_id
+
+        trace_id = current_trace_id()
+
         prev_hash = self._events[-1]["entry_hash"] if self._events else _GENESIS_HASH
         event = {
             "log_id": f"AUDIT-{next(self._counter):06d}",
@@ -108,6 +116,7 @@ class AuditLog:
             "actor_id": actor_id,
             "resource_id": resource_id,
             "request_id": request_id,
+            "trace_id": trace_id,
             "action": action,
             "result": result,
             "metadata": clean_metadata,
@@ -121,10 +130,13 @@ class AuditLog:
         return event
 
     # -------------------------------------------------------------------- read
-    def list(self, request_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        if request_id is None:
-            return list(self._events)
-        return [event for event in self._events if event.get("request_id") == request_id]
+    def list(self, request_id: Optional[str] = None, trace_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        events = self._events
+        if request_id is not None:
+            events = [e for e in events if e.get("request_id") == request_id]
+        if trace_id is not None:
+            events = [e for e in events if e.get("trace_id") == trace_id]
+        return list(events)
 
     def verify_chain(self) -> Dict[str, Any]:
         """Recompute the hash chain and HMAC signatures; report the first

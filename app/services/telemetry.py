@@ -42,6 +42,11 @@ class _RingExporter(SpanExporter):
                         "span_id": format(span.context.span_id, "016x"),
                         "parent_id": format(span.parent.span_id, "016x") if span.parent else None,
                         "duration_ms": duration_ms,
+                        # Wall-clock bounds (ns since epoch) — kept so a trace can
+                        # be reassembled into a waterfall (offset of each span
+                        # relative to its trace root).
+                        "start_ns": span.start_time,
+                        "end_ns": span.end_time,
                         "attributes": dict(span.attributes or {}),
                         "status": span.status.status_code.name,
                     }
@@ -53,6 +58,10 @@ class _RingExporter(SpanExporter):
     def recent(self, limit: int = 100) -> List[Dict[str, Any]]:
         with self._lock:
             return list(self._spans[-limit:])
+
+    def snapshot(self) -> List[Dict[str, Any]]:
+        with self._lock:
+            return list(self._spans)
 
 
 _ring = _RingExporter()
@@ -93,6 +102,106 @@ def span(name: str, **attributes: Any) -> Iterator[Any]:
 
 def recent_spans(limit: int = 100) -> List[Dict[str, Any]]:
     return _ring.recent(limit)
+
+
+def current_trace_id() -> str | None:
+    """The active request's trace id (32-hex), or ``None`` outside any span.
+
+    This is the single id shared by the trace and the audit trail, so an
+    engineer can pivot from a compliance audit entry to the performance
+    waterfall for the very same request, and back.
+    """
+    ctx = trace.get_current_span().get_span_context()
+    return format(ctx.trace_id, "032x") if ctx.is_valid else None
+
+
+def _root_of(spans: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """The trace root: the parentless span, else the earliest-started one."""
+    parentless = [s for s in spans if s["parent_id"] is None]
+    pool = parentless or spans
+    return min(pool, key=lambda s: s.get("start_ns") or 0)
+
+
+def list_traces(limit: int = 25) -> List[Dict[str, Any]]:
+    """Recent distinct traces, newest first — the 'recent requests' list.
+
+    One row per trace: its root operation, wall-clock span, how many spans it
+    fanned out into, and whether any span errored.
+    """
+    by_trace: Dict[str, List[Dict[str, Any]]] = {}
+    for s in _ring.snapshot():
+        by_trace.setdefault(s["trace_id"], []).append(s)
+
+    traces: List[Dict[str, Any]] = []
+    for trace_id, spans in by_trace.items():
+        root = _root_of(spans)
+        starts = [s["start_ns"] for s in spans if s.get("start_ns") is not None]
+        ends = [s["end_ns"] for s in spans if s.get("end_ns") is not None]
+        total_ms = round((max(ends) - min(starts)) / 1_000_000, 2) if starts and ends else root.get("duration_ms")
+        traces.append(
+            {
+                "trace_id": trace_id,
+                "root": root["name"],
+                "span_count": len(spans),
+                "total_ms": total_ms,
+                "status": "ERROR" if any(s["status"] == "ERROR" for s in spans) else "OK",
+                "started_at_ns": min(starts) if starts else None,
+                "request_id": root.get("attributes", {}).get("request_id"),
+            }
+        )
+    traces.sort(key=lambda t: t.get("started_at_ns") or 0, reverse=True)
+    return traces[:limit]
+
+
+def get_trace(trace_id: str) -> Dict[str, Any]:
+    """Waterfall for one request: every span with its offset from the root.
+
+    Spans are ordered by start time and annotated with ``offset_ms`` (how long
+    after the request began this step started) and ``depth`` (nesting level),
+    which is exactly what a waterfall chart renders.
+    """
+    spans = [s for s in _ring.snapshot() if s["trace_id"] == trace_id]
+    if not spans:
+        return {"trace_id": trace_id, "found": False, "spans": []}
+
+    root = _root_of(spans)
+    base = root.get("start_ns") or 0
+    by_id = {s["span_id"]: s for s in spans}
+
+    def depth(s: Dict[str, Any]) -> int:
+        level, parent = 0, s["parent_id"]
+        # Walk up the parent chain within this trace (guard against cycles).
+        while parent is not None and parent in by_id and level < len(spans):
+            level += 1
+            parent = by_id[parent]["parent_id"]
+        return level
+
+    ordered = sorted(spans, key=lambda s: s.get("start_ns") or 0)
+    waterfall = [
+        {
+            "name": s["name"],
+            "span_id": s["span_id"],
+            "parent_id": s["parent_id"],
+            "depth": depth(s),
+            "offset_ms": round(((s.get("start_ns") or base) - base) / 1_000_000, 2),
+            "duration_ms": s["duration_ms"],
+            "status": s["status"],
+            "attributes": s["attributes"],
+        }
+        for s in ordered
+    ]
+    starts = [s["start_ns"] for s in spans if s.get("start_ns") is not None]
+    ends = [s["end_ns"] for s in spans if s.get("end_ns") is not None]
+    total_ms = round((max(ends) - min(starts)) / 1_000_000, 2) if starts and ends else root.get("duration_ms")
+    return {
+        "trace_id": trace_id,
+        "found": True,
+        "root": root["name"],
+        "total_ms": total_ms,
+        "span_count": len(spans),
+        "status": "ERROR" if any(s["status"] == "ERROR" for s in spans) else "OK",
+        "spans": waterfall,
+    }
 
 
 # ------------------------------------------------------------- LLM accounting

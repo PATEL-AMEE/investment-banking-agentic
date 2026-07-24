@@ -939,6 +939,15 @@ def flow_page() -> FileResponse:
     return FileResponse(index_path)
 
 
+@app.get("/telemetry")
+def telemetry_page() -> FileResponse:
+    """Serve the live trace-waterfall UI (per-request latency + audit correlation)."""
+    index_path = BASE_DIR / "static" / "telemetry" / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Telemetry UI not available")
+    return FileResponse(index_path)
+
+
 @app.get("/api/audit/logs")
 def get_audit_logs(request_id: Optional[str] = None, current_user: dict = Depends(require_audit_read)) -> Dict[str, Any]:
     events = audit_log.list(request_id)
@@ -973,6 +982,38 @@ def telemetry_llm(current_user: dict = Depends(require_dashboard_read)) -> Dict[
     from app.services.telemetry import llm_usage
 
     return llm_usage.summary()
+
+
+@app.get("/api/telemetry/traces")
+def telemetry_traces(limit: int = 25, current_user: dict = Depends(require_dashboard_read)) -> Dict[str, Any]:
+    """Recent distinct request traces, newest first (the 'recent requests' list).
+
+    Access is role-restricted (dashboard.read) — trace dashboards are
+    engineering data and are themselves gated, per Phase 7.
+    """
+    from app.services.telemetry import list_traces
+
+    traces = list_traces(limit)
+    return {"count": len(traces), "traces": traces}
+
+
+@app.get("/api/telemetry/trace/{trace_id}")
+def telemetry_trace(trace_id: str, current_user: dict = Depends(require_dashboard_read)) -> Dict[str, Any]:
+    """Waterfall for one request: per-step latency across the pipeline, plus
+    the audit events that share this trace id (the compliance-facing record of
+    the same request). This is the single pane that joins the two systems.
+    """
+    from app.services.telemetry import get_trace
+
+    waterfall = get_trace(trace_id)
+    if not waterfall["found"]:
+        raise HTTPException(status_code=404, detail=f"No trace {trace_id} in the retained window")
+    # Correlated compliance record — same trace id, separate system.
+    waterfall["audit_events"] = [
+        {k: e.get(k) for k in ("log_id", "event_type", "actor_id", "action", "result", "resource_id")}
+        for e in audit_log.list(trace_id=trace_id)
+    ]
+    return waterfall
 
 
 # --- event subscribers: agents/services reacting to each other's events ---
