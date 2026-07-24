@@ -129,6 +129,14 @@ def test_chat_ui_is_served():
     assert "/api/agents/ask" in response.text
 
 
+def test_staff_flow_page_is_served():
+    response = client.get("/flow")
+    assert response.status_code == 200
+    # The diagram covers the full staff path and the audit-trail invariant.
+    for marker in ("Supervisor Agent", "Confidence check", "Review queue", "cryptographic audit trail"):
+        assert marker in response.text
+
+
 def test_supervisor_exposed_as_mcp_tool():
     server = MCPServer(store)
     assert "supervisor_ask" in server.tool_names()

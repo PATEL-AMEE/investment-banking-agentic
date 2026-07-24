@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Client Portal — Sign in</title>
+<style>
+  :root {
+    color-scheme: light;
+    --plane:#f4f6f9; --surface:#fff; --surface-2:#fafbfc;
+    --ink:#0e1217; --ink-2:#51565e; --muted:#8a8f98;
+    --grid:#e6e9ee; --hair:rgba(14,18,23,.10);
+    --accent:#2a78d6; --accent-soft:#eaf2fc;
+    --critical:#d03b3b; --crit-bg:rgba(208,59,59,.12);
+    --radius:14px; --shadow:0 1px 2px rgba(14,18,23,.04),0 4px 16px rgba(14,18,23,.05);
+    --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
+    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#17273b; --crit-bg:rgba(208,59,59,.20);
+  }}
+  :root[data-theme="dark"]{
+    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
+    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
+    --accent:#3987e5; --accent-soft:#17273b; --crit-bg:rgba(208,59,59,.20);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+  .card{width:100%;max-width:420px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);padding:28px}
+  h1{font-size:22px;font-weight:680;letter-spacing:-.02em;margin:0 0 4px}
+  .sub{margin:0 0 22px;color:var(--ink-2);font-size:13.5px}
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:14px 0 6px}
+  label:first-of-type{margin-top:0}
+  input{font:inherit;font-size:14px;width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+  button.pri{font:inherit;font-weight:600;font-size:14px;width:100%;margin-top:22px;padding:11px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+  button.pri:disabled{opacity:.5;cursor:default}
+  .error{display:none;margin-top:14px;padding:10px 13px;border-radius:9px;background:var(--crit-bg);color:var(--critical);font-size:13px}
+  .alt{margin-top:18px;font-size:13px;color:var(--ink-2);text-align:center}
+  .alt a{color:var(--accent);text-decoration:none;font-weight:600}
+  footer{margin-top:16px;font-size:11.5px;color:var(--muted);text-align:center}
+</style>
+</head>
+<body>
+<form class="card" id="loginForm">
+  <h1>🏦 Client portal</h1>
+  <p class="sub">Sign in to check your application status.</p>
+
+  <label for="email">Email</label>
+  <input type="email" id="email" placeholder="you@company.com" required autocomplete="email">
+
+  <label for="password">Password</label>
+  <input type="password" id="password" placeholder="••••••••" required autocomplete="current-password">
+
+  <button class="pri" id="submit" type="submit">Sign in</button>
+  <div class="error" id="error"></div>
+
+  <p class="alt">New here? <a href="/client">Open a corporate account →</a></p>
+  <footer>Client accounts are separate from staff sign-in.<br>
+  In production this page is Azure AD B2C.</footer>
+</form>
+
+<script>
+(function () {
+  const form = document.getElementById("loginForm");
+  const errorEl = document.getElementById("error");
+  const submitBtn = document.getElementById("submit");
+  const K_TOKEN = "client_token", K_APP = "client_app_id", K_CO = "client_company";
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    errorEl.style.display = "none";
+    submitBtn.disabled = true;
+    try {
+      const response = await fetch("/api/client/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: document.getElementById("email").value.trim(),
+          password: document.getElementById("password").value,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || "Sign-in failed");
+      sessionStorage.setItem(K_TOKEN, data.accessToken);
+      if (data.applicationId) sessionStorage.setItem(K_APP, data.applicationId);
+      if (data.company) sessionStorage.setItem(K_CO, data.company);
+      location.href = "/client";
+    } catch (err) {
+      errorEl.textContent = String(err.message || err);
+      errorEl.style.display = "block";
+      submitBtn.disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

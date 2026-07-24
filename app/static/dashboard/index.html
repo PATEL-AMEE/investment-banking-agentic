@@ -118,7 +118,9 @@
     <div class="tags">
       <span class="badge live"><span class="dot"></span>Live data</span>
       <span class="tags" id="authslot"></span>
+      <a class="btn" href="/reviewer" style="text-decoration:none">✅ Reviews</a>
       <a class="btn" href="/chat" style="text-decoration:none">💬 Chat</a>
+      <a class="btn" href="/flow" style="text-decoration:none">🗺️ Flow</a>
       <button class="btn" id="refresh" type="button">↻ Refresh</button>
       <button class="btn" id="theme" type="button">◐ Theme</button>
     </div>
@@ -153,6 +155,8 @@
         <p class="cap">Human-in-the-loop tasks created by real inspect calls</p>
         <div class="kv"><span>Pending</span><b id="revPending" class="num">–</b></div>
         <div class="kv"><span>Resolved</span><b id="revResolved" class="num">–</b></div>
+        <div id="revList" style="margin-top:10px"></div>
+        <a class="btn" id="openReviews" href="/reviewer" style="margin-top:12px;display:inline-block;text-decoration:none">Open full review queue →</a>
       </div>
 
       <div class="card">
@@ -238,6 +242,7 @@ async function load() {
 
   $('#revPending').textContent = d.reviews.pending;
   $('#revResolved').textContent = d.reviews.resolved;
+  renderReviews();
 
   const ev = d.audit.recent||[];
   $('#auditList').innerHTML = ev.length ? ev.map(e=>`<div class="ev">
@@ -245,6 +250,52 @@ async function load() {
     <div class="d">${esc(e.actor_id)} → ${esc(e.resource_id||'')}</div>
     <div class="ts">${esc(e.timestamp)}</div></div>`).join('')
     : '<div class="empty">No audit events yet — run a check below.</div>';
+}
+
+// Inline review queue: a risk manager can approve/reject right here.
+async function renderReviews() {
+  const listEl = $('#revList');
+  if (!listEl) return;
+  const roles = (window.ibAuth && window.ibAuth.roles) || [];
+  // Risk managers/reviewers can act; so can anonymous dev use. View-only roles
+  // (compliance analyst, executive) see the list without action buttons.
+  const viewOnly = roles.length && !roles.includes('risk_manager') && !roles.includes('reviewer');
+  let items = [];
+  try { items = await (await fetch('/api/reviews/pending')).json(); }
+  catch (e) { listEl.innerHTML = '<div class="empty">Could not load reviews.</div>'; return; }
+  if (!Array.isArray(items) || !items.length) {
+    listEl.innerHTML = '<div class="empty">No pending reviews right now 🎉</div>'; return;
+  }
+  listEl.innerHTML = items.slice(0, 8).map(r => `
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--grid)">
+      <div style="min-width:0">
+        <b class="idc">${esc(r.review_id)}</b>
+        <span class="pill ${r.severity==='high'?'crit':'warn'}">${esc(r.severity)}</span>
+        <div class="d" style="font-size:12px;color:var(--muted);margin-top:2px">${esc(r.reason)} · ${esc(r.client_id)}</div>
+      </div>
+      ${viewOnly ? '' : `<div style="display:flex;gap:6px;flex:none">
+        <button class="btn rvAct" data-id="${esc(r.review_id)}" data-dec="approve" style="background:var(--good);color:#fff;border-color:transparent;padding:6px 11px">Approve</button>
+        <button class="btn rvAct" data-id="${esc(r.review_id)}" data-dec="reject" style="background:var(--critical);color:#fff;border-color:transparent;padding:6px 11px">Reject</button>
+      </div>`}
+    </div>`).join('') +
+    (items.length > 8 ? `<div class="d" style="font-size:12px;margin-top:8px">+ ${items.length - 8} more — <a href="/reviewer">open full queue →</a></div>` : '');
+  listEl.querySelectorAll('.rvAct').forEach(b => b.onclick = () => resolveReview(b.dataset.id, b.dataset.dec, b));
+}
+
+async function resolveReview(id, decision, btn) {
+  const reviewer = (window.ibAuth && window.ibAuth.user) || 'dashboard';
+  if (btn) { btn.disabled = true; btn.textContent = decision === 'approve' ? 'Approving…' : 'Rejecting…'; }
+  const res = await fetch(`/api/reviews/${id}/resolve`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ decision, reviewer }),
+  });
+  if (!res.ok) {
+    const msg = res.status === 403 ? 'You do not have permission to resolve reviews.' : ('Could not ' + decision + ' (HTTP ' + res.status + ')');
+    alert(msg);
+    if (btn) { btn.disabled = false; btn.textContent = decision === 'approve' ? 'Approve' : 'Reject'; }
+    return;
+  }
+  load(); // refresh counts, decisions table, and the review list
 }
 
 $('#refresh').onclick = load;
@@ -273,6 +324,15 @@ $('#copForm').onsubmit = async e => {
 };
 
 load();
+</script>
+<script>
+  // Role-aware label: risk managers approve/escalate; other staff view only.
+  (function () {
+    const roles = (window.ibAuth && window.ibAuth.roles) || [];
+    const canResolve = roles.includes("risk_manager") || roles.includes("reviewer");
+    const btn = document.getElementById("openReviews");
+    if (btn && canResolve) btn.textContent = "Open review queue → approve / escalate";
+  })();
 </script>
 </body>
 </html>

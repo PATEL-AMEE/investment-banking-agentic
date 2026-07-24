@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from app.api import app, store
 from app.services import rbac
-from app.services.local_auth import issue_token
+from app.services.local_auth import issue_client_token, issue_staff_token, issue_token
 
 client = TestClient(app)
 
@@ -163,6 +163,49 @@ def test_unknown_document_type_rejected():
         headers=headers,
     )
     assert response.status_code == 422
+
+
+# ------------------------------------------------ separate client login (B2C)
+def test_client_can_sign_up_at_intake_then_sign_back_in():
+    # Intake doubles as sign-up when credentials are supplied.
+    view = _apply(company="Returning Co Ltd", email="ceo@returning.co", password="s3cret-pass")
+    app_id = view["applicationId"]
+
+    # A returning client signs in through the separate client login.
+    login = client.post(
+        "/api/client/login",
+        json={"email": "ceo@returning.co", "password": "s3cret-pass"},
+    )
+    assert login.status_code == 200, login.text
+    body = login.json()
+    assert body["applicationId"] == app_id
+    assert "accessToken" in body
+    assert not (_INTERNAL_KEYS & set(body))
+
+    # The login token reads that client's own application.
+    headers = {"Authorization": f"Bearer {body['accessToken']}"}
+    status = client.get(f"/api/client/status/{app_id}", headers=headers)
+    assert status.status_code == 200
+
+
+def test_client_login_rejects_bad_credentials():
+    _apply(company="Guarded Co", email="user@guarded.co", password="right-password")
+    bad = client.post("/api/client/login", json={"email": "user@guarded.co", "password": "wrong"})
+    assert bad.status_code == 401
+    unknown = client.post("/api/client/login", json={"email": "nobody@nowhere.co", "password": "x"})
+    assert unknown.status_code == 401
+
+
+def test_client_portal_token_is_walled_off_from_staff_surface():
+    # A real client-portal token (distinct audience) cannot reach staff tools,
+    # even though it is a structurally valid JWT.
+    tok = issue_client_token("client:Walled Co", extra_claims={"client_id": "CLIENT-WALLED-CO"})
+    headers = {"Authorization": f"Bearer {tok}"}
+    assert client.get("/api/reviews/pending", headers=headers).status_code == 403
+    assert client.get("/api/dashboard/summary", headers=headers).status_code == 403
+    # But a staff-audience token reaches its own surface.
+    staff = issue_staff_token("risk.mgr", ["risk_manager"])
+    assert client.get("/api/reviews/pending", headers={"Authorization": f"Bearer {staff}"}).status_code == 200
 
 
 # -------------------------------------------------- review resolution updates

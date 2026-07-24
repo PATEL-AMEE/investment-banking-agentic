@@ -62,6 +62,12 @@
   details.sections summary{cursor:pointer;color:var(--muted);font-size:12px}
   details.sections pre{background:var(--surface-2);border:1px solid var(--hair);border-radius:9px;padding:10px;overflow-x:auto;font-family:var(--mono);font-size:11.5px;max-height:280px}
   .notes{margin-top:8px;font-size:12px;color:var(--muted);font-style:italic}
+  .fb{display:flex;gap:8px;align-items:center;margin-top:10px;border-top:1px solid var(--grid);padding-top:8px}
+  .fb .lb{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+  .fb button{font-size:12px;padding:4px 10px;border-radius:8px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2)}
+  .fb button:hover{color:var(--ink);border-color:var(--accent)}
+  .fb button.on{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+  .fb .thanks{font-size:12px;color:var(--good)}
 
   form.composer{display:flex;flex-direction:column;gap:9px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:13px;box-shadow:var(--shadow);position:sticky;bottom:14px}
   .rowline{display:flex;gap:9px}
@@ -88,6 +94,7 @@
     <div class="tags">
       <span class="tags" id="authslot"></span>
       <a class="btn" href="/dashboard">📊 Dashboard</a>
+      <a class="btn" href="/flow">🗺️ Flow</a>
       <button class="btn" id="theme" type="button">◐ Theme</button>
     </div>
   </header>
@@ -176,7 +183,49 @@
     return msg;
   }
 
-  function renderResult(msg, data) {
+  async function sendFeedback(query, data, verdict, comment) {
+    const sources = (data.citations || []).map((c) => c.source_id).filter(Boolean);
+    const response = await fetch("/api/copilot/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query: query, answer: data.answer || "", verdict: verdict, comment: comment || "", sources: sources }),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      throw new Error(err.detail || ("HTTP " + response.status));
+    }
+    return response.json();
+  }
+
+  function addFeedback(msg, query, data) {
+    // Phase 6.6: let staff flag any answer; a "wrong" flag feeds the eval loop.
+    const fb = el("div", "fb");
+    fb.appendChild(el("span", "lb", "Was this right?"));
+    const wrong = el("button", "", "👎 Flag as wrong");
+    const good = el("button", "", "👍 Helpful");
+    wrong.type = "button"; good.type = "button";
+    async function submit(verdict, btn) {
+      const comment = verdict === "wrong" ? (window.prompt("What was wrong? (optional)") || "") : "";
+      btn.disabled = true;
+      try {
+        await sendFeedback(query, data, verdict, comment);
+        fb.textContent = "";
+        fb.appendChild(el("span", "thanks", verdict === "wrong"
+          ? "✓ Flagged — this now feeds the evaluation loop." : "✓ Thanks for the feedback."));
+      } catch (err) {
+        btn.disabled = false;
+        const e = el("span", "lb", "Couldn't record: " + err.message);
+        fb.appendChild(e);
+      }
+    }
+    wrong.addEventListener("click", () => submit("wrong", wrong));
+    good.addEventListener("click", () => submit("good", good));
+    fb.appendChild(wrong);
+    fb.appendChild(good);
+    msg.appendChild(fb);
+  }
+
+  function renderResult(msg, data, query) {
     msg.textContent = "";
     if (data.routed_to && data.routed_to.length) {
       const routes = el("div", "routes");
@@ -217,6 +266,7 @@
     if (data.routing_notes && data.routing_notes.length) {
       msg.appendChild(el("div", "notes", data.routing_notes.join(" · ")));
     }
+    if (data.answer) addFeedback(msg, query, data);
   }
 
   form.addEventListener("submit", async (event) => {
@@ -241,7 +291,7 @@
         pending.classList.add("error");
         pending.textContent = "Error " + response.status + ": " + (data.detail || JSON.stringify(data));
       } else {
-        renderResult(pending, data);
+        renderResult(pending, data, query);
       }
     } catch (err) {
       pending.classList.add("error");

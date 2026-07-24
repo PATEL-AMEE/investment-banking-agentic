@@ -140,3 +140,30 @@ def run_evaluation(dataset: List[Dict[str, Any]], store: Any) -> Dict[str, Any]:
 def load_golden_dataset(path: str | Path | None = None) -> List[Dict[str, Any]]:
     dataset_path = Path(path) if path else Path("data") / "eval" / "golden_qa.json"
     return json.loads(dataset_path.read_text(encoding="utf-8"))
+
+
+def run_feedback_regression(store: Any) -> Dict[str, Any]:
+    """Re-run every question staff flagged 'wrong' and score it now.
+
+    Closes the Phase 6.6 → Phase 9 loop: human-spotted failures become an
+    ongoing regression set. Each case is re-answered by the live copilot chain
+    and scored for faithfulness/hallucination, so we can see whether a
+    previously-wrong answer has since improved. No expected-source labels are
+    assumed (feedback carries none), so precision/recall are omitted.
+    """
+    from app.services import feedback
+
+    flagged = feedback.flagged_questions()
+    cases: List[Dict[str, Any]] = []
+    for entry in flagged:
+        scored = evaluate_case({"question": entry["query"], "case_id": entry["feedback_id"]}, store)
+        scored["flagged_by"] = entry.get("user_id")
+        scored["comment"] = entry.get("comment", "")
+        cases.append(scored)
+    faith_vals = [c["metrics"]["faithfulness"] for c in cases]
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "flagged_count": len(cases),
+        "mean_faithfulness": round(sum(faith_vals) / len(faith_vals), 4) if faith_vals else 0.0,
+        "cases": cases,
+    }

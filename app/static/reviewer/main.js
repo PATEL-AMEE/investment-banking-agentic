@@ -1,22 +1,29 @@
 const pendingEl = document.getElementById('pending');
 const resolverEl = document.getElementById('resolver');
-const saveBtn = document.getElementById('saveToken');
-const tokenInput = document.getElementById('authToken');
 
-function getAuthHeader() {
-  const t = localStorage.getItem('auth_token');
-  return t ? { Authorization: 'Bearer ' + t } : {};
+// Auth is handled by the shared /static/auth.js: it attaches the signed-in
+// session's Bearer token to every /api/ fetch and bounces to /login on 401.
+// No page-local token entry needed — this page just uses the current session.
+
+// Only risk managers/reviewers may resolve (matches the dashboard and the
+// server's reviews.resolve permission). Other signed-in staff see the queue
+// read-only. An anonymous dev session (no roles) keeps full action, so the
+// offline demo still works without logging in.
+const roles = (window.ibAuth && window.ibAuth.roles) || [];
+const canResolve = !roles.length || roles.includes('risk_manager') || roles.includes('reviewer');
+
+function renderViewOnlyBanner() {
+  if (canResolve) return;
+  const banner = document.createElement('p');
+  banner.className = 'viewonly';
+  banner.textContent = 'View only — your role can see the review queue but cannot resolve reviews.';
+  pendingEl.parentElement.insertBefore(banner, pendingEl);
 }
-
-saveBtn.addEventListener('click', () => {
-  localStorage.setItem('auth_token', tokenInput.value.trim());
-  loadPending();
-});
 
 async function loadPending() {
   pendingEl.innerHTML = 'Loading...';
   try {
-    const res = await fetch('/api/reviews/pending', { headers: getAuthHeader() });
+    const res = await fetch('/api/reviews/pending');
     if (!res.ok) throw new Error('Unauthorized or service error');
     const data = await res.json();
     if (!data.length) {
@@ -28,7 +35,11 @@ async function loadPending() {
       const card = document.createElement('div');
       card.className = 'card';
       card.innerHTML = `<strong>${r.review_id}</strong> — ${r.reason} <br/><small>client: ${r.client_id}</small>`;
-      card.addEventListener('click', () => showResolver(r));
+      if (canResolve) {
+        card.addEventListener('click', () => showResolver(r));
+      } else {
+        card.style.cursor = 'default';
+      }
       pendingEl.appendChild(card);
     });
   } catch (err) {
@@ -45,7 +56,7 @@ function showResolver(review) {
     <label>Decision</label>
     <select id="decisionSel"><option value="approve">approve</option><option value="reject">reject</option></select>
     <label>Reviewer name</label>
-    <input id="reviewerName" placeholder="your name" />
+    <input id="reviewerName" placeholder="your name" value="${(window.ibAuth && window.ibAuth.user) || ''}" />
     <label>Notes</label>
     <textarea id="notes"></textarea>
     <button id="submitResolve">Submit</button>
@@ -56,12 +67,13 @@ function showResolver(review) {
 
 async function submitResolve(reviewId) {
   const decision = document.getElementById('decisionSel').value;
-  const reviewer = document.getElementById('reviewerName').value || 'unknown';
+  const reviewer = document.getElementById('reviewerName').value
+    || (window.ibAuth && window.ibAuth.user) || 'unknown';
   const notes = document.getElementById('notes').value || '';
   try {
     const res = await fetch(`/api/reviews/${reviewId}/resolve`, {
       method: 'POST',
-      headers: Object.assign({ 'Content-Type': 'application/json' }, getAuthHeader()),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ decision, reviewer, notes }),
     });
     if (!res.ok) throw new Error('Failed to resolve');
@@ -74,4 +86,8 @@ async function submitResolve(reviewId) {
 }
 
 // initial load
+if (!canResolve) {
+  resolverEl.innerHTML = '<p>View only — resolving is restricted to reviewers.</p>';
+}
+renderViewOnlyBanner();
 loadPending();

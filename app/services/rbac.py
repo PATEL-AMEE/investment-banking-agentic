@@ -43,6 +43,8 @@ PERM_REVIEWS_READ = "reviews.read"
 PERM_REVIEWS_RESOLVE = "reviews.resolve"
 PERM_AUDIT_READ = "audit.read"
 PERM_DASHBOARD_READ = "dashboard.read"
+# Staff may flag a Copilot answer as wrong/good — feeds the Phase 9 eval loop.
+PERM_FEEDBACK_SUBMIT = "feedback.submit"
 # Client-facing surface: submit an application and read one's OWN status.
 # Resource scoping (own client_id only) is enforced at the endpoint on top
 # of these role permissions.
@@ -61,6 +63,7 @@ _ANALYST_SURFACE: FrozenSet[str] = frozenset(
         PERM_AUDIT_READ,
         PERM_DASHBOARD_READ,
         PERM_MCP_CALL,
+        PERM_FEEDBACK_SUBMIT,
     }
 )
 
@@ -76,13 +79,14 @@ ROLE_PERMISSIONS: Dict[str, FrozenSet[str]] = {
             PERM_DOCUMENTS_UPLOAD,
             PERM_DASHBOARD_READ,
             PERM_APPLICATION_STATUS,
+            PERM_FEEDBACK_SUBMIT,
         }
     ),
     "risk_manager": _ANALYST_SURFACE
     | frozenset(
         {PERM_CLIENT_PROFILE, PERM_ONBOARDING_KYC, PERM_REVIEWS_RESOLVE, PERM_EVAL_RUN, PERM_APPLICATION_STATUS}
     ),
-    "executive": frozenset({PERM_DASHBOARD_READ, PERM_AUDIT_READ, PERM_REVIEWS_READ}),
+    "executive": frozenset({PERM_DASHBOARD_READ, PERM_AUDIT_READ, PERM_REVIEWS_READ, PERM_FEEDBACK_SUBMIT}),
     "service_agent": frozenset({PERM_MCP_CALL, PERM_AGENTS_ASK, PERM_COPILOT_QUERY, PERM_SANCTIONS_CHECK}),
     # External client (the bank's customer): the trigger for the onboarding
     # chain, but completely outside the internal staff tools. They can submit

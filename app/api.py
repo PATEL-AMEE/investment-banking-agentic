@@ -24,7 +24,13 @@ from app.services.workflow import run_inspection_workflow
 from app.services.onboarding import run_onboarding_workflow
 from app.services.audit import audit_log
 from app.services.event_bus import TOPIC_REVIEW_ESCALATED, TOPIC_REVIEW_RESOLVED, event_bus
-from app.services.local_auth import auth_required, issue_token, validate_local_token
+from app.services.local_auth import (
+    AUD_CLIENT,
+    auth_required,
+    issue_client_token,
+    issue_staff_token,
+    validate_local_token,
+)
 from app.services import rbac
 from app.services.rbac import check_permission
 from app.agents.document_analysis import run_document_analysis
@@ -34,6 +40,20 @@ from app.agents.supervisor import run_supervisor
 
 app = FastAPI(title="Investment Banking Agentic AI Platform")
 BASE_DIR = Path(__file__).resolve().parent
+
+
+@app.middleware("http")
+async def no_cache_html(request, call_next):
+    """Stop browsers serving a stale UI after a page changes.
+
+    The static HTML pages (login, dashboard, chat, …) are app UI, not assets —
+    a cached copy hides new controls (e.g. the review-queue approve buttons).
+    Force revalidation on every HTML response; JSON/API responses are untouched.
+    """
+    response = await call_next(request)
+    if response.headers.get("content-type", "").startswith("text/html"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 NEO4J_URI = os.getenv("NEO4J_URI", "")
 NEO4J_USER = os.getenv("NEO4J_USER", "neo4j")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
@@ -121,6 +141,13 @@ def _is_anonymous_dev(current_user: dict) -> bool:
     )
 
 
+# The only permissions a client-portal token may ever exercise. Anything else
+# is the internal staff app's surface and must reject a client-audience token
+# outright — the two apps are separate identity domains (two logins), so a
+# client credential can never reach staff tooling regardless of role claims.
+_CLIENT_PORTAL_PERMISSIONS = frozenset({rbac.PERM_APPLICATION_SUBMIT, rbac.PERM_APPLICATION_STATUS})
+
+
 def require_permission(permission: str):
     """Dependency factory: role -> permission check from the central policy.
 
@@ -133,6 +160,17 @@ def require_permission(permission: str):
     def dependency(current_user: dict = Depends(get_current_user)) -> dict:
         if _is_anonymous_dev(current_user):
             return current_user
+        # App-boundary gate: a client-portal token is confined to the
+        # client-facing surface, before any role logic runs.
+        if current_user.get("aud") == AUD_CLIENT and permission not in _CLIENT_PORTAL_PERMISSIONS:
+            audit_log.record(
+                event_type="rbac_check",
+                actor_id=str(current_user.get("sub", "user-unknown")),
+                action=f"permission:{permission}",
+                result="denied",
+                metadata={"reason": "client-portal token cannot access internal staff endpoints"},
+            )
+            raise HTTPException(status_code=403, detail="client portal token cannot access internal endpoints")
         roles = list(current_user.get("roles") or [])
         if check_permission(str(current_user.get("sub", "user-unknown")), roles, permission):
             return current_user
@@ -165,11 +203,54 @@ class TokenRequest(BaseModel):
 
 @app.post("/api/auth/token")
 def issue_dev_token(payload: TokenRequest) -> Dict[str, Any]:
-    """Issue a local development JWT (disabled when Azure AD is enabled)."""
+    """Issue a local development JWT (disabled when Azure AD is enabled).
+
+    Low-level dev/test helper: roles are taken as given. The staff login page
+    does NOT use this — it uses ``/api/auth/staff/login``, where the role comes
+    from the directory, not the caller, so nobody can self-assign a role.
+    """
     if azure_ad_settings.get("enable_azure_ad"):
         raise HTTPException(status_code=400, detail="Local tokens are disabled; use Azure AD")
-    token = issue_token(payload.username, payload.roles)
+    token = issue_staff_token(payload.username, payload.roles)
     return {"access_token": token, "token_type": "bearer", "roles": payload.roles}
+
+
+class StaffLogin(BaseModel):
+    email: str
+
+
+@app.post("/api/auth/staff/login")
+def staff_login(payload: StaffLogin) -> Dict[str, Any]:
+    """Staff sign-in by Microsoft work email (dev stand-in for Entra SSO).
+
+    Looks the email up in the staff directory and issues a token with the
+    role the directory assigns — the browser never picks its own role. In
+    production this endpoint is replaced by the Azure AD authorization-code
+    flow; the email + password + MFA are handled by Microsoft, not here.
+    """
+    if azure_ad_settings.get("enable_azure_ad"):
+        raise HTTPException(status_code=400, detail="Local sign-in is disabled; use Microsoft SSO")
+    from app.services import staff_directory
+
+    member = staff_directory.lookup(payload.email)
+    if member is None:
+        audit_log.record(
+            event_type="staff_login",
+            actor_id=f"staff:{(payload.email or '').strip().lower()}",
+            action="sign_in",
+            result="denied",
+            metadata={"reason": "email not in staff directory"},
+        )
+        raise HTTPException(status_code=401, detail="We couldn't find an account with that work email.")
+    token = issue_staff_token(member["name"], [member["role"]])
+    audit_log.record(
+        event_type="staff_login",
+        actor_id=f"staff:{member['email']}",
+        action="sign_in",
+        result="allowed",
+        metadata={"role": member["role"]},
+    )
+    return {"access_token": token, "token_type": "bearer", "name": member["name"], "roles": [member["role"]]}
 
 
 class InspectRequest(BaseModel):
@@ -240,8 +321,19 @@ class ReviewDecision(BaseModel):
 
 @app.get("/", include_in_schema=False)
 def root() -> RedirectResponse:
-    """Landing on the bare URL should show the dashboard, not a 404."""
-    return RedirectResponse(url="/dashboard")
+    """Front door: staff start at the corporate sign-in, then reach the app."""
+    return RedirectResponse(url="/login")
+
+
+@app.get("/api/auth/config")
+def auth_config() -> Dict[str, Any]:
+    """Tells the login page which sign-in flow to run.
+
+    ``azure_ad`` on → the "Sign in with Microsoft" button starts the real
+    corporate SSO redirect; off (dev) → it opens the demo directory picker
+    that issues a local staff token.
+    """
+    return {"azure_ad": bool(azure_ad_settings.get("enable_azure_ad"))}
 
 
 @app.get("/health")
@@ -337,6 +429,49 @@ def copilot_query(payload: Dict[str, Any], current_user: dict = Depends(require_
     return run_copilot(payload.get("query", ""), store)
 
 
+class FeedbackRequest(BaseModel):
+    query: str
+    answer: str = ""
+    verdict: str  # "wrong" | "good"
+    comment: Optional[str] = None
+    sources: list[str] = []
+
+
+require_feedback_submit = require_permission(rbac.PERM_FEEDBACK_SUBMIT)
+
+
+@app.post("/api/copilot/feedback")
+def submit_feedback(req: FeedbackRequest, current_user: dict = Depends(require_feedback_submit)) -> Dict[str, Any]:
+    """Staff flags a Copilot answer as wrong/good (Phase 6.6 feedback loop).
+
+    A ``wrong`` verdict becomes a regression case for the Phase 9 eval harness
+    (see ``/api/eval/run``), so a human-spotted failure is measured until fixed.
+    """
+    from app.services import feedback
+
+    try:
+        entry = feedback.record_feedback(
+            query=req.query,
+            answer=req.answer,
+            verdict=req.verdict,
+            comment=req.comment,
+            sources=req.sources,
+            user_id=str(current_user.get("sub", "user-unknown")),
+            audit_log=audit_log,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return {"feedback_id": entry["feedback_id"], "verdict": entry["verdict"], **feedback.summary()}
+
+
+@app.get("/api/copilot/feedback")
+def feedback_summary(current_user: dict = Depends(require_reviews_read)) -> Dict[str, Any]:
+    """Aggregate feedback counts + the flagged-question regression set."""
+    from app.services import feedback
+
+    return {**feedback.summary(), "flagged": feedback.flagged_questions()}
+
+
 class AskRequest(BaseModel):
     query: str
     clientId: Optional[str] = None
@@ -405,18 +540,25 @@ def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
     Scores faithfulness, hallucination rate, answer relevancy, and context
     precision/recall across the copilot RAG chain on the live store.
     """
-    from app.eval.harness import load_golden_dataset, run_evaluation
+    from app.eval.harness import load_golden_dataset, run_evaluation, run_feedback_regression
 
     try:
         dataset = load_golden_dataset(BASE_DIR.parent / "data" / "eval" / "golden_qa.json")
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="golden dataset not found") from exc
     report = run_evaluation(dataset, store)
+    # Fold in the Phase 6.6 feedback loop: questions staff flagged as wrong are
+    # re-scored here so a human-spotted failure keeps being measured until fixed.
+    report["feedback_regression"] = run_feedback_regression(store)
     audit_log.record(
         event_type="rag_evaluation",
         actor_id=str(current_user.get("sub", "local-user")),
         action="run_evaluation",
-        metadata={"case_count": report["case_count"], **report["aggregate"]},
+        metadata={
+            "case_count": report["case_count"],
+            "flagged_count": report["feedback_regression"]["flagged_count"],
+            **report["aggregate"],
+        },
     )
     return report
 
@@ -451,6 +593,21 @@ class ClientApplication(BaseModel):
     beneficialOwners: list[Dict[str, Any]] = []
     documentsProvided: list[str] = []
     documentText: Optional[str] = None
+    # Portal sign-up credentials (external identity — separate from staff SSO).
+    # Optional so programmatic/test submissions still work; the portal UI
+    # always supplies them, and they are what a returning client signs in with.
+    email: Optional[str] = None
+    password: Optional[str] = None
+
+
+class ClientLogin(BaseModel):
+    email: str
+    password: str
+
+
+def _issue_client_session(client_id: str, company_name: str, subject: str) -> str:
+    """Mint a client-portal token scoped to one client's own records."""
+    return issue_client_token(subject, ["client"], extra_claims={"client_id": client_id})
 
 
 @app.post("/api/client/apply")
@@ -459,10 +616,12 @@ def client_apply(req: ClientApplication) -> Dict[str, Any]:
 
     Runs the onboarding agent (sanctions/PEP screening, risk scoring,
     review escalation) plus NLP over any supplied documents — all outputs
-    stay internal. The response is the client-safe view plus a token scoped
-    to this client's own records (``client`` role + ``client_id`` claim).
+    stay internal. The response is the client-safe view plus a client-portal
+    token scoped to this client's own records (``client`` role + ``client_id``
+    claim). When credentials are supplied, the form doubles as portal sign-up
+    (mirroring an Azure AD B2C sign-up policy) so the client can return later.
     """
-    from app.services import applications
+    from app.services import applications, client_identity
 
     record = applications.submit_application(
         company_name=req.companyName,
@@ -473,15 +632,59 @@ def client_apply(req: ClientApplication) -> Dict[str, Any]:
         document_text=req.documentText,
         store=store,
         audit_log=audit_log,
+        contact_email=req.email,
     )
-    token = issue_token(
-        f"client:{req.companyName}",
-        ["client"],
-        extra_claims={"client_id": record["client_id"]},
-    )
+    if req.email and req.password:
+        client_identity.register(
+            email=req.email,
+            password=req.password,
+            client_id=record["client_id"],
+            company_name=req.companyName,
+            application_id=record["application_id"],
+        )
+    token = _issue_client_session(record["client_id"], req.companyName, f"client:{req.companyName}")
     view = applications.client_view(record, store)
     view["accessToken"] = token
     return view
+
+
+@app.post("/api/client/login")
+def client_login(req: ClientLogin) -> Dict[str, Any]:
+    """Returning-client sign-in for the portal (Azure AD B2C in prod).
+
+    Authenticates against the client identity store — entirely separate from
+    staff SSO — and returns a client-portal token plus the plain-language
+    status of the client's most recent application.
+    """
+    from app.services import applications, client_identity
+
+    account = client_identity.authenticate(req.email, req.password)
+    if account is None:
+        audit_log.record(
+            event_type="client_login",
+            actor_id=f"client-portal:{req.email.strip().lower()}",
+            action="sign_in",
+            result="denied",
+            metadata={"reason": "invalid credentials"},
+        )
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    records = applications.applications_for_client(account.client_id)
+    latest = max(records, key=lambda r: r["submitted_at"], default=None)
+    token = _issue_client_session(account.client_id, account.company_name, f"client:{account.email}")
+    audit_log.record(
+        event_type="client_login",
+        actor_id=f"client-portal:{account.email}",
+        action="sign_in",
+        result="allowed",
+        resource_id=latest["application_id"] if latest else None,
+    )
+    payload: Dict[str, Any] = {"accessToken": token, "company": account.company_name}
+    if latest is not None:
+        view = applications.client_view(latest, store)
+        view["accessToken"] = token
+        payload = view
+    return payload
 
 
 require_application_status = require_permission(rbac.PERM_APPLICATION_STATUS)
@@ -576,6 +779,15 @@ def client_portal_page() -> FileResponse:
     return FileResponse(index_path)
 
 
+@app.get("/client/login")
+def client_login_page() -> FileResponse:
+    """Serve the client portal sign-in page (Azure AD B2C replaces this in prod)."""
+    index_path = BASE_DIR / "static" / "client" / "login" / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Client login not available")
+    return FileResponse(index_path)
+
+
 @app.get("/api/reviews/pending", response_model=list[ReviewTask])
 def pending_reviews(current_user: dict = Depends(require_reviews_read)) -> list[ReviewTask]:
     # Deduplicate defensively by review_id (keep the most recent upsert).
@@ -591,6 +803,10 @@ def resolve_review(review_id: str, payload: ReviewDecision, current_user: dict =
         review = store.resolve_review(review_id, payload.decision, payload.reviewer, payload.notes)
     except Exception as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    # GraphStore raises on a missing id; Neo4jStore returns None. Treat both as
+    # not-found so a bad review_id is a clean 404, never a 500.
+    if review is None:
+        raise HTTPException(status_code=404, detail=f"Review {review_id} not found")
     event_bus.publish(
         TOPIC_REVIEW_RESOLVED,
         {
@@ -599,6 +815,13 @@ def resolve_review(review_id: str, payload: ReviewDecision, current_user: dict =
             "reviewer": review["reviewer"],
         },
     )
+    # If this review gates a client application, the decision changes the
+    # client's status — notify them (approved/declined), client-safe wording.
+    from app.services import applications
+
+    app_record = applications.application_for_review(review["review_id"])
+    if app_record is not None:
+        applications.notify_status_change(app_record, store, audit_log)
     return {
         "review_id": review["review_id"],
         "status": review["status"],
@@ -704,6 +927,15 @@ def overview_page() -> FileResponse:
     index_path = BASE_DIR / "static" / "overview" / "index.html"
     if not index_path.exists():
         raise HTTPException(status_code=404, detail="Overview UI not available")
+    return FileResponse(index_path)
+
+
+@app.get("/flow")
+def flow_page() -> FileResponse:
+    """Serve the staff request-flow diagram (SSO → supervisor → confidence → audit)."""
+    index_path = BASE_DIR / "static" / "flow" / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="Flow UI not available")
     return FileResponse(index_path)
 
 

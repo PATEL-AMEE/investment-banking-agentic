@@ -31,7 +31,7 @@
   .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:18px}
   label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:14px 0 5px}
   label:first-child{margin-top:0}
-  input[type=text],select,textarea{font:inherit;font-size:14px;width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
+  input[type=text],input[type=email],input[type=password],select,textarea{font:inherit;font-size:14px;width:100%;padding:10px 12px;border-radius:9px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
   textarea{resize:vertical;min-height:70px}
   input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
   button.pri{font:inherit;font-weight:600;font-size:14.5px;width:100%;margin-top:20px;padding:12px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer}
@@ -70,7 +70,7 @@
 <body>
 <div class="wrap">
   <h1>🏦 Open a Corporate Account</h1>
-  <p class="sub">Submit your application below. You can check its status here at any time.</p>
+  <p class="sub">Submit your application below, or <a href="/client/login" style="color:var(--accent);font-weight:600;text-decoration:none">sign in</a> to check an existing one.</p>
 
   <!-- intake form -->
   <form class="card" id="intake">
@@ -94,8 +94,14 @@
     <label for="owners">Beneficial owners (one per line — name, country)</label>
     <textarea id="owners" placeholder="Jane Smith, GB&#10;John Doe, US"></textarea>
 
+    <label for="email">Email (your sign-in for this application)</label>
+    <input type="email" id="email" placeholder="you@company.com" required autocomplete="email">
+
+    <label for="password">Create a password</label>
+    <input type="password" id="password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" required minlength="8" autocomplete="new-password">
+
     <button class="pri" id="submitBtn" type="submit">Submit application</button>
-    <div class="meta" style="margin-top:10px">After submitting you will be asked to upload the required documents in the next step.</div>
+    <div class="meta" style="margin-top:10px">After submitting you will be asked to upload the required documents in the next step. Use your email and password to return here later.</div>
     <div class="error" id="error"></div>
   </form>
 
@@ -213,6 +219,8 @@
           product: document.getElementById("product").value,
           beneficialOwners: owners,
           documentsProvided: [],
+          email: document.getElementById("email").value.trim(),
+          password: document.getElementById("password").value,
         }),
       });
       const data = await response.json();

@@ -46,6 +46,7 @@ def submit_application(
     document_text: Optional[str],
     store: Any,
     audit_log: Any = None,
+    contact_email: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Accept a client submission and run the internal onboarding pipeline."""
     from app.services.onboarding import run_onboarding_workflow
@@ -85,6 +86,7 @@ def submit_application(
         "jurisdiction": jurisdiction,
         "product": product,
         "submitted_at": datetime.now(timezone.utc).isoformat(),
+        "contact_email": (contact_email or "").strip().lower() or None,
         "documents_provided": sorted(provided),
         "documents_missing": missing,
         # Internal-only pipeline outputs (never returned to the client):
@@ -107,6 +109,7 @@ def submit_application(
             request_id=request_id,
             metadata={"product": product, "documents_missing": len(missing)},
         )
+    notify_status_change(record, store, audit_log)
     return record
 
 
@@ -165,6 +168,7 @@ def add_documents(
                 "still_missing": len(record["documents_missing"]),
             },
         )
+    notify_status_change(record, store, audit_log)
     return record
 
 
@@ -223,6 +227,61 @@ def get_application(application_id: str) -> Optional[Dict[str, Any]]:
 
 def applications_for_client(client_id: str) -> List[Dict[str, Any]]:
     return [r for r in _applications.values() if r.get("client_id") == client_id]
+
+
+def application_for_review(review_id: str) -> Optional[Dict[str, Any]]:
+    """The application whose final/escalation review is ``review_id`` (if any)."""
+    for record in _applications.values():
+        if record["internal"].get("review_task_id") == review_id:
+            return record
+    return None
+
+
+# Subject lines per client-facing status (plain-language, no internal detail).
+_NOTIFY_SUBJECTS: Dict[str, str] = {
+    "received": "We've received your application",
+    "additional_documents_needed": "Action needed: documents required for your application",
+    "under_review": "Your application is under review",
+    "approved": "Your application has been approved",
+    "declined": "An update on your application",
+}
+
+
+def notify_status_change(record: Dict[str, Any], store: Any, audit_log: Any = None) -> Optional[str]:
+    """Email the client when their status changes — deduped per transition.
+
+    Compares the current client-safe status against the last one we notified
+    on; sends only on a real change, and only when we hold a contact email.
+    Returns the status notified, or ``None`` when nothing was sent.
+    """
+    email = record.get("contact_email")
+    if not email:
+        return None
+    view = client_view(record, store)
+    status = view["status"]
+    if record.get("notified_status") == status:
+        return None
+    record["notified_status"] = status
+
+    from app.services import notifications
+
+    subject = _NOTIFY_SUBJECTS.get(status, "An update on your application")
+    body = (
+        f"Application {record['application_id']} — {record['company_name']}\n\n"
+        f"{view['message']}"
+    )
+    if view.get("outstandingDocuments"):
+        outstanding = ", ".join(d["label"] for d in view["outstandingDocuments"])
+        body += f"\n\nOutstanding documents: {outstanding}.\nSign in at /client/login to upload them."
+    notifications.send(
+        email,
+        subject,
+        body,
+        application_id=record["application_id"],
+        status=status,
+        audit_log=audit_log,
+    )
+    return status
 
 
 def _review_state(record: Dict[str, Any], store: Any) -> Optional[Dict[str, Any]]:

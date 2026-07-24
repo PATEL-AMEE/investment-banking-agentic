@@ -77,6 +77,51 @@ def test_garbage_token_is_rejected():
     assert response.status_code == 401
 
 
+def test_staff_login_assigns_role_from_directory_not_the_caller():
+    # The browser sends only an email — the role is looked up server-side.
+    resp = client.post("/api/auth/staff/login", json={"email": "priya.shah@bank-demo.example"})
+    assert resp.status_code == 200, resp.text
+    body = resp.json()
+    assert body["name"] == "Priya Shah"
+    assert body["roles"] == ["risk_manager"]
+    # That token reaches a risk-manager-only endpoint.
+    assert client.get("/api/reviews/pending", headers={"Authorization": f"Bearer {body['access_token']}"}).status_code == 200
+
+
+def test_staff_login_rejects_unknown_email():
+    resp = client.post("/api/auth/staff/login", json={"email": "stranger@nowhere.example"})
+    assert resp.status_code == 401
+
+
+def test_resolve_review_rejected_for_non_reviewer_role():
+    # A compliance analyst may READ the queue but not RESOLVE — the reviewer
+    # page's client-side "view only" gate is backed by this server-side check,
+    # so bypassing the UI still fails. 403 fires from the RBAC dependency
+    # before any review lookup, so a synthetic id is fine.
+    token = client.post("/api/auth/token", json={"username": "aisha", "roles": ["compliance_analyst"]}).json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    assert client.get("/api/reviews/pending", headers=headers).status_code == 200
+    resolve = client.post(
+        "/api/reviews/REV-DOES-NOT-EXIST/resolve",
+        json={"decision": "approve", "reviewer": "aisha"},
+        headers=headers,
+    )
+    assert resolve.status_code == 403
+
+
+def test_resolve_review_permission_granted_for_reviewer_role():
+    # A risk manager clears the RBAC gate; the synthetic id then 404s at the
+    # store lookup — i.e. it got *past* the permission check (never 403).
+    token = client.post("/api/auth/token", json={"username": "priya", "roles": ["risk_manager"]}).json()["access_token"]
+    resolve = client.post(
+        "/api/reviews/REV-DOES-NOT-EXIST/resolve",
+        json={"decision": "approve", "reviewer": "priya"},
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resolve.status_code != 403
+    assert resolve.status_code == 404
+
+
 # ------------------------------------------------------------------------ DLP
 def test_mask_pii_masks_email_iban_and_card():
     masked, found = mask_pii("Mail a@b.com, IBAN GB29NWBK60161331926819, card 4111 1111 1111 1111.")
