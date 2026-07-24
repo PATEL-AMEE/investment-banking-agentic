@@ -54,6 +54,7 @@
   .pill{font-size:11px;font-weight:620;padding:3px 9px;border-radius:999px;display:inline-block;background:var(--accent-soft);color:var(--accent);font-family:var(--mono)}
   .pill.warn{color:var(--warning);background:var(--warn-bg)}
   .pill.crit{color:var(--critical);background:var(--crit-bg)}
+  .pill.muted{color:var(--muted);background:var(--surface-2);border:1px solid var(--hair);font-family:var(--font);font-weight:600}
   .cites{margin-top:10px;border-top:1px solid var(--grid);padding-top:8px}
   .cites .cap{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:4px}
   .cite{border-left:2px solid var(--accent);padding:2px 0 2px 9px;margin-top:6px;font-size:12.5px}
@@ -225,30 +226,33 @@
     msg.appendChild(fb);
   }
 
-  // Friendly label + severity for a raw guardrail flag from the API.
+  // Only guardrails meaningful to a user are shown. PII masking is internal
+  // governance detail (recorded in the audit trail) — not chat clutter.
   function guardrailPill(flag) {
-    if (flag === "out_of_scope") return { label: "⛔ Out of scope", cls: "pill warn" };
     if (flag === "prompt_injection") return { label: "🛡️ Injection blocked", cls: "pill crit" };
-    if (flag.indexOf("pii_masked:") === 0) return { label: "🔒 PII masked · " + flag.split(":")[1], cls: "pill" };
-    return { label: flag, cls: "pill warn" };
+    return null;
+  }
+  function userGuardrails(data) {
+    return (data.guardrails || []).map(guardrailPill).filter(Boolean);
   }
 
   function renderResult(msg, data, query) {
     msg.textContent = "";
-    const addGuardrails = (routes, crit) =>
-      (data.guardrails || []).forEach((g) => {
-        const p = guardrailPill(g);
-        routes.appendChild(el("span", crit ? "pill crit" : p.cls, p.label));
-      });
-    if (data.routed_to && data.routed_to.length) {
+    const guards = userGuardrails(data);
+    if (data.out_of_scope) {
+      // A clean decline: one muted status chip, no routing noise.
+      const row = el("div", "routes");
+      row.appendChild(el("span", "pill muted", "⛔ Out of scope"));
+      msg.appendChild(row);
+    } else if (data.routed_to && data.routed_to.length) {
       const routes = el("div", "routes");
       data.routed_to.forEach((r) => routes.appendChild(el("span", "pill", r)));
       (data.denied || []).forEach((r) => routes.appendChild(el("span", "pill crit", r + " · denied")));
-      addGuardrails(routes, false);
+      guards.forEach((p) => routes.appendChild(el("span", p.cls, p.label)));
       msg.appendChild(routes);
-    } else if (data.guardrails && data.guardrails.length) {
+    } else if (guards.length) {
       const routes = el("div", "routes");
-      addGuardrails(routes, true);
+      guards.forEach((p) => routes.appendChild(el("span", p.cls, p.label)));
       msg.appendChild(routes);
     }
     msg.appendChild(el("div", "answer", data.answer || "(no answer)"));
