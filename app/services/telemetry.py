@@ -90,6 +90,24 @@ trace.set_tracer_provider(_provider)
 tracer = trace.get_tracer("ib.agents")
 
 
+def instrument_fastapi(app: Any) -> None:
+    """Record each incoming HTTP request as a **server** span.
+
+    Without this the app only emits internal spans (agent/tool/LLM), which land
+    in Application Insights' ``dependencies`` table — so the request-based
+    dashboards (Overview, Performance, Application Map) show nothing. This makes
+    HTTP requests appear in the ``requests`` table with the internal spans
+    nested under them. Health-probe URLs are excluded so they don't flood the
+    trace store. Best-effort: a missing/incompatible package never breaks boot.
+    """
+    try:
+        from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+        FastAPIInstrumentor.instrument_app(app, tracer_provider=_provider, excluded_urls="health")
+    except Exception:
+        pass
+
+
 @contextmanager
 def span(name: str, **attributes: Any) -> Iterator[Any]:
     """Convenience wrapper: ``with span("agent.onboarding", client_id=...)``."""

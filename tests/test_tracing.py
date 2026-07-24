@@ -85,8 +85,12 @@ def test_trace_endpoints_return_waterfall_and_correlated_audit():
     assert resp.status_code == 200
     body = resp.json()
     assert body["found"] is True
-    assert body["root"] == "agent.supervisor"
     assert body["spans"]
+    # Over HTTP the FastAPI request span is the trace root, with the supervisor
+    # nested under it — so both should appear in the same trace.
+    names = [s["name"] for s in body["spans"]]
+    assert any("/api/agents/ask" in n for n in names)
+    assert "agent.supervisor" in names
     # The correlated compliance record travels with the same id.
     assert "audit_events" in body
     assert all(k in body["spans"][0] for k in ("name", "offset_ms", "duration_ms", "depth"))

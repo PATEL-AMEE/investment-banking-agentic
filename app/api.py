@@ -41,6 +41,13 @@ from app.agents.supervisor import run_supervisor
 app = FastAPI(title="Investment Banking Agentic AI Platform")
 BASE_DIR = Path(__file__).resolve().parent
 
+# Record incoming HTTP requests as server spans so Azure Monitor's request-based
+# dashboards (Overview, Performance, Application Map) populate, with the agent/
+# tool/LLM spans nested underneath.
+from app.services.telemetry import instrument_fastapi
+
+instrument_fastapi(app)
+
 
 @app.middleware("http")
 async def no_cache_html(request, call_next):
