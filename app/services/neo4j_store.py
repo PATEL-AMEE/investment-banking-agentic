@@ -11,7 +11,21 @@ from neo4j.exceptions import ServiceUnavailable
 
 class Neo4jStore:
     def __init__(self, uri: str, user: str, password: str):
-        self.driver = GraphDatabase.driver(uri, auth=(user, password))
+        # Resilience against Aura dropping idle connections (which surfaced as
+        # intermittent SessionExpired 500s): retire connections well before the
+        # server's idle timeout, and ping any connection idle longer than
+        # liveness_check_timeout before reusing it so a dead one is replaced
+        # rather than written to. max_transaction_retry_time lets managed
+        # transactions retry transient failures.
+        self.driver = GraphDatabase.driver(
+            uri,
+            auth=(user, password),
+            max_connection_lifetime=300,
+            liveness_check_timeout=30,
+            connection_acquisition_timeout=30,
+            max_transaction_retry_time=15,
+            keep_alive=True,
+        )
         try:
             self.driver.verify_connectivity()
         except ServiceUnavailable as exc:
