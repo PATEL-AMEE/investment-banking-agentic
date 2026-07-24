@@ -57,3 +57,1032 @@ E-55,D-0042,9,Whistleblower report logged and handled confidentially
 E-56,D-0043,4,Virtual asset transaction traced to verified wallet
 E-57,D-0044,6,Suspicious transaction report filed with regulator
 E-58,D-0044,2,Owner address verified via recent utility bill
+E-0001,D-0001,17,Screening result requires a secondary analyst assessment.
+E-0002,D-0001,12,Source-of-funds declaration has been received and indexed.
+E-0003,D-0001,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0004,D-0002,16,Corporate registry extract confirms directorship details.
+E-0005,D-0002,15,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0006,D-0002,4,Transaction narrative indicates cross-border activity requiring review.
+E-0007,D-0003,13,Corporate registry extract confirms directorship details.
+E-0008,D-0003,13,Corporate registry extract confirms directorship details.
+E-0009,D-0003,12,Transaction narrative indicates cross-border activity requiring review.
+E-0010,D-0004,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0011,D-0004,11,Screening result requires a secondary analyst assessment.
+E-0012,D-0004,12,Screening result requires a secondary analyst assessment.
+E-0013,D-0005,9,Corporate registry extract confirms directorship details.
+E-0014,D-0006,2,Transaction narrative indicates cross-border activity requiring review.
+E-0015,D-0006,1,Transaction narrative indicates cross-border activity requiring review.
+E-0016,D-0006,14,Source-of-funds declaration has been received and indexed.
+E-0017,D-0007,13,Transaction narrative indicates cross-border activity requiring review.
+E-0018,D-0008,14,Corporate registry extract confirms directorship details.
+E-0019,D-0008,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0020,D-0008,11,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0021,D-0009,7,Screening result requires a secondary analyst assessment.
+E-0022,D-0010,3,Screening result requires a secondary analyst assessment.
+E-0023,D-0011,11,Source-of-funds declaration has been received and indexed.
+E-0024,D-0011,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0025,D-0012,11,Corporate registry extract confirms directorship details.
+E-0026,D-0012,16,Corporate registry extract confirms directorship details.
+E-0027,D-0012,18,Source-of-funds declaration has been received and indexed.
+E-0028,D-0013,9,Source-of-funds declaration has been received and indexed.
+E-0029,D-0013,16,Transaction narrative indicates cross-border activity requiring review.
+E-0030,D-0013,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0031,D-0014,8,Source-of-funds declaration has been received and indexed.
+E-0032,D-0015,9,Corporate registry extract confirms directorship details.
+E-0033,D-0015,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0034,D-0016,16,Screening result requires a secondary analyst assessment.
+E-0035,D-0017,2,Source-of-funds declaration has been received and indexed.
+E-0036,D-0018,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0037,D-0018,10,Screening result requires a secondary analyst assessment.
+E-0038,D-0018,5,Corporate registry extract confirms directorship details.
+E-0039,D-0019,14,Source-of-funds declaration has been received and indexed.
+E-0040,D-0020,11,Screening result requires a secondary analyst assessment.
+E-0041,D-0020,3,Source-of-funds declaration has been received and indexed.
+E-0042,D-0021,16,Corporate registry extract confirms directorship details.
+E-0043,D-0022,3,Screening result requires a secondary analyst assessment.
+E-0044,D-0022,7,Transaction narrative indicates cross-border activity requiring review.
+E-0045,D-0022,18,Transaction narrative indicates cross-border activity requiring review.
+E-0046,D-0023,4,Source-of-funds declaration has been received and indexed.
+E-0047,D-0024,14,Screening result requires a secondary analyst assessment.
+E-0048,D-0024,1,Corporate registry extract confirms directorship details.
+E-0049,D-0024,15,Source-of-funds declaration has been received and indexed.
+E-0050,D-0025,4,Screening result requires a secondary analyst assessment.
+E-0051,D-0026,12,Source-of-funds declaration has been received and indexed.
+E-0052,D-0026,8,Transaction narrative indicates cross-border activity requiring review.
+E-0053,D-0026,6,Transaction narrative indicates cross-border activity requiring review.
+E-0054,D-0027,14,Transaction narrative indicates cross-border activity requiring review.
+E-0055,D-0027,8,Source-of-funds declaration has been received and indexed.
+E-0056,D-0027,13,Corporate registry extract confirms directorship details.
+E-0057,D-0028,6,Screening result requires a secondary analyst assessment.
+E-0058,D-0028,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0059,D-0029,3,Corporate registry extract confirms directorship details.
+E-0060,D-0030,6,Transaction narrative indicates cross-border activity requiring review.
+E-0061,D-0031,10,Source-of-funds declaration has been received and indexed.
+E-0062,D-0031,12,Screening result requires a secondary analyst assessment.
+E-0063,D-0031,3,Source-of-funds declaration has been received and indexed.
+E-0064,D-0032,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0065,D-0032,13,Transaction narrative indicates cross-border activity requiring review.
+E-0066,D-0032,2,Corporate registry extract confirms directorship details.
+E-0067,D-0033,4,Source-of-funds declaration has been received and indexed.
+E-0068,D-0033,15,Source-of-funds declaration has been received and indexed.
+E-0069,D-0034,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0070,D-0034,13,Source-of-funds declaration has been received and indexed.
+E-0071,D-0035,1,Corporate registry extract confirms directorship details.
+E-0072,D-0036,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0073,D-0036,1,Transaction narrative indicates cross-border activity requiring review.
+E-0074,D-0037,9,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0075,D-0037,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0076,D-0038,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0077,D-0038,14,Corporate registry extract confirms directorship details.
+E-0078,D-0039,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0079,D-0039,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0080,D-0039,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0081,D-0040,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0082,D-0040,1,Screening result requires a secondary analyst assessment.
+E-0083,D-0041,3,Transaction narrative indicates cross-border activity requiring review.
+E-0084,D-0041,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0085,D-0041,8,Source-of-funds declaration has been received and indexed.
+E-0086,D-0042,9,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0087,D-0042,18,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0088,D-0043,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0089,D-0043,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0090,D-0044,2,Source-of-funds declaration has been received and indexed.
+E-0091,D-0044,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0092,D-0044,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0093,D-0045,9,Screening result requires a secondary analyst assessment.
+E-0094,D-0046,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0095,D-0046,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0096,D-0047,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0097,D-0047,9,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0098,D-0047,5,Transaction narrative indicates cross-border activity requiring review.
+E-0099,D-0048,1,Corporate registry extract confirms directorship details.
+E-0100,D-0049,8,Source-of-funds declaration has been received and indexed.
+E-0101,D-0050,14,Source-of-funds declaration has been received and indexed.
+E-0102,D-0050,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0103,D-0050,11,Source-of-funds declaration has been received and indexed.
+E-0104,D-0051,6,Corporate registry extract confirms directorship details.
+E-0105,D-0051,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0106,D-0051,6,Source-of-funds declaration has been received and indexed.
+E-0107,D-0052,3,Source-of-funds declaration has been received and indexed.
+E-0108,D-0052,15,Source-of-funds declaration has been received and indexed.
+E-0109,D-0053,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0110,D-0054,4,Corporate registry extract confirms directorship details.
+E-0111,D-0054,4,Screening result requires a secondary analyst assessment.
+E-0112,D-0055,14,Screening result requires a secondary analyst assessment.
+E-0113,D-0055,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0114,D-0056,7,Transaction narrative indicates cross-border activity requiring review.
+E-0115,D-0056,8,Screening result requires a secondary analyst assessment.
+E-0116,D-0056,14,Screening result requires a secondary analyst assessment.
+E-0117,D-0057,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0118,D-0057,10,Transaction narrative indicates cross-border activity requiring review.
+E-0119,D-0057,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0120,D-0058,10,Screening result requires a secondary analyst assessment.
+E-0121,D-0058,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0122,D-0058,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0123,D-0059,11,Screening result requires a secondary analyst assessment.
+E-0124,D-0059,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0125,D-0059,12,Transaction narrative indicates cross-border activity requiring review.
+E-0126,D-0060,2,Source-of-funds declaration has been received and indexed.
+E-0127,D-0061,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0128,D-0061,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0129,D-0062,16,Corporate registry extract confirms directorship details.
+E-0130,D-0062,8,Transaction narrative indicates cross-border activity requiring review.
+E-0131,D-0062,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0132,D-0063,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0133,D-0063,1,Screening result requires a secondary analyst assessment.
+E-0134,D-0063,11,Corporate registry extract confirms directorship details.
+E-0135,D-0064,15,Transaction narrative indicates cross-border activity requiring review.
+E-0136,D-0064,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0137,D-0064,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0138,D-0065,18,Transaction narrative indicates cross-border activity requiring review.
+E-0139,D-0065,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0140,D-0065,11,Transaction narrative indicates cross-border activity requiring review.
+E-0141,D-0066,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0142,D-0067,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0143,D-0068,8,Screening result requires a secondary analyst assessment.
+E-0144,D-0068,11,Source-of-funds declaration has been received and indexed.
+E-0145,D-0068,10,Corporate registry extract confirms directorship details.
+E-0146,D-0069,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0147,D-0070,16,Source-of-funds declaration has been received and indexed.
+E-0148,D-0070,18,Source-of-funds declaration has been received and indexed.
+E-0149,D-0071,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0150,D-0072,11,Screening result requires a secondary analyst assessment.
+E-0151,D-0072,12,Source-of-funds declaration has been received and indexed.
+E-0152,D-0072,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0153,D-0073,2,Transaction narrative indicates cross-border activity requiring review.
+E-0154,D-0073,13,Screening result requires a secondary analyst assessment.
+E-0155,D-0074,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0156,D-0074,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0157,D-0075,14,Source-of-funds declaration has been received and indexed.
+E-0158,D-0075,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0159,D-0075,11,Screening result requires a secondary analyst assessment.
+E-0160,D-0076,13,Corporate registry extract confirms directorship details.
+E-0161,D-0077,6,Source-of-funds declaration has been received and indexed.
+E-0162,D-0077,12,Source-of-funds declaration has been received and indexed.
+E-0163,D-0078,15,Transaction narrative indicates cross-border activity requiring review.
+E-0164,D-0078,6,Source-of-funds declaration has been received and indexed.
+E-0165,D-0078,2,Transaction narrative indicates cross-border activity requiring review.
+E-0166,D-0079,12,Transaction narrative indicates cross-border activity requiring review.
+E-0167,D-0079,3,Source-of-funds declaration has been received and indexed.
+E-0168,D-0079,3,Transaction narrative indicates cross-border activity requiring review.
+E-0169,D-0080,14,Source-of-funds declaration has been received and indexed.
+E-0170,D-0080,4,Source-of-funds declaration has been received and indexed.
+E-0171,D-0081,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0172,D-0081,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0173,D-0081,5,Corporate registry extract confirms directorship details.
+E-0174,D-0082,17,Transaction narrative indicates cross-border activity requiring review.
+E-0175,D-0083,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0176,D-0083,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0177,D-0083,7,Transaction narrative indicates cross-border activity requiring review.
+E-0178,D-0084,18,Transaction narrative indicates cross-border activity requiring review.
+E-0179,D-0084,10,Transaction narrative indicates cross-border activity requiring review.
+E-0180,D-0084,3,Corporate registry extract confirms directorship details.
+E-0181,D-0085,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0182,D-0086,15,Screening result requires a secondary analyst assessment.
+E-0183,D-0086,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0184,D-0086,16,Screening result requires a secondary analyst assessment.
+E-0185,D-0087,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0186,D-0088,8,Transaction narrative indicates cross-border activity requiring review.
+E-0187,D-0088,12,Screening result requires a secondary analyst assessment.
+E-0188,D-0088,10,Source-of-funds declaration has been received and indexed.
+E-0189,D-0089,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0190,D-0090,11,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0191,D-0090,4,Transaction narrative indicates cross-border activity requiring review.
+E-0192,D-0091,5,Transaction narrative indicates cross-border activity requiring review.
+E-0193,D-0091,9,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0194,D-0092,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0195,D-0093,3,Source-of-funds declaration has been received and indexed.
+E-0196,D-0094,3,Source-of-funds declaration has been received and indexed.
+E-0197,D-0095,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0198,D-0095,4,Corporate registry extract confirms directorship details.
+E-0199,D-0095,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0200,D-0096,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0201,D-0096,11,Corporate registry extract confirms directorship details.
+E-0202,D-0096,11,Transaction narrative indicates cross-border activity requiring review.
+E-0203,D-0097,5,Screening result requires a secondary analyst assessment.
+E-0204,D-0098,16,Transaction narrative indicates cross-border activity requiring review.
+E-0205,D-0099,2,Screening result requires a secondary analyst assessment.
+E-0206,D-0100,11,Corporate registry extract confirms directorship details.
+E-0207,D-0100,4,Screening result requires a secondary analyst assessment.
+E-0208,D-0100,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0209,D-0101,11,Transaction narrative indicates cross-border activity requiring review.
+E-0210,D-0101,10,Corporate registry extract confirms directorship details.
+E-0211,D-0102,15,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0212,D-0102,11,Corporate registry extract confirms directorship details.
+E-0213,D-0103,3,Transaction narrative indicates cross-border activity requiring review.
+E-0214,D-0103,18,Source-of-funds declaration has been received and indexed.
+E-0215,D-0104,13,Screening result requires a secondary analyst assessment.
+E-0216,D-0104,17,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0217,D-0105,13,Transaction narrative indicates cross-border activity requiring review.
+E-0218,D-0105,8,Source-of-funds declaration has been received and indexed.
+E-0219,D-0106,12,Corporate registry extract confirms directorship details.
+E-0220,D-0106,12,Screening result requires a secondary analyst assessment.
+E-0221,D-0106,13,Transaction narrative indicates cross-border activity requiring review.
+E-0222,D-0107,14,Screening result requires a secondary analyst assessment.
+E-0223,D-0107,3,Screening result requires a secondary analyst assessment.
+E-0224,D-0108,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0225,D-0108,14,Corporate registry extract confirms directorship details.
+E-0226,D-0109,12,Corporate registry extract confirms directorship details.
+E-0227,D-0109,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0228,D-0109,15,Screening result requires a secondary analyst assessment.
+E-0229,D-0110,13,Corporate registry extract confirms directorship details.
+E-0230,D-0110,8,Corporate registry extract confirms directorship details.
+E-0231,D-0111,4,Source-of-funds declaration has been received and indexed.
+E-0232,D-0111,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0233,D-0111,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0234,D-0112,15,Transaction narrative indicates cross-border activity requiring review.
+E-0235,D-0113,10,Screening result requires a secondary analyst assessment.
+E-0236,D-0113,13,Source-of-funds declaration has been received and indexed.
+E-0237,D-0114,12,Screening result requires a secondary analyst assessment.
+E-0238,D-0115,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0239,D-0116,9,Source-of-funds declaration has been received and indexed.
+E-0240,D-0116,1,Screening result requires a secondary analyst assessment.
+E-0241,D-0117,16,Transaction narrative indicates cross-border activity requiring review.
+E-0242,D-0117,16,Screening result requires a secondary analyst assessment.
+E-0243,D-0117,2,Screening result requires a secondary analyst assessment.
+E-0244,D-0118,1,Transaction narrative indicates cross-border activity requiring review.
+E-0245,D-0118,9,Transaction narrative indicates cross-border activity requiring review.
+E-0246,D-0118,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0247,D-0119,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0248,D-0119,2,Transaction narrative indicates cross-border activity requiring review.
+E-0249,D-0120,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0250,D-0120,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0251,D-0121,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0252,D-0121,16,Transaction narrative indicates cross-border activity requiring review.
+E-0253,D-0121,6,Corporate registry extract confirms directorship details.
+E-0254,D-0122,12,Corporate registry extract confirms directorship details.
+E-0255,D-0123,8,Transaction narrative indicates cross-border activity requiring review.
+E-0256,D-0123,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0257,D-0123,15,Screening result requires a secondary analyst assessment.
+E-0258,D-0124,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0259,D-0124,17,Transaction narrative indicates cross-border activity requiring review.
+E-0260,D-0125,14,Transaction narrative indicates cross-border activity requiring review.
+E-0261,D-0126,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0262,D-0126,18,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0263,D-0126,6,Transaction narrative indicates cross-border activity requiring review.
+E-0264,D-0127,15,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0265,D-0127,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0266,D-0128,4,Screening result requires a secondary analyst assessment.
+E-0267,D-0128,13,Screening result requires a secondary analyst assessment.
+E-0268,D-0128,14,Screening result requires a secondary analyst assessment.
+E-0269,D-0129,9,Corporate registry extract confirms directorship details.
+E-0270,D-0129,11,Source-of-funds declaration has been received and indexed.
+E-0271,D-0130,2,Transaction narrative indicates cross-border activity requiring review.
+E-0272,D-0130,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0273,D-0130,9,Corporate registry extract confirms directorship details.
+E-0274,D-0131,1,Transaction narrative indicates cross-border activity requiring review.
+E-0275,D-0131,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0276,D-0132,15,Corporate registry extract confirms directorship details.
+E-0277,D-0133,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0278,D-0133,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0279,D-0134,14,Transaction narrative indicates cross-border activity requiring review.
+E-0280,D-0134,1,Corporate registry extract confirms directorship details.
+E-0281,D-0135,2,Source-of-funds declaration has been received and indexed.
+E-0282,D-0136,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0283,D-0137,5,Transaction narrative indicates cross-border activity requiring review.
+E-0284,D-0137,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0285,D-0137,11,Screening result requires a secondary analyst assessment.
+E-0286,D-0138,4,Source-of-funds declaration has been received and indexed.
+E-0287,D-0138,10,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0288,D-0139,15,Source-of-funds declaration has been received and indexed.
+E-0289,D-0140,18,Screening result requires a secondary analyst assessment.
+E-0290,D-0140,8,Transaction narrative indicates cross-border activity requiring review.
+E-0291,D-0140,16,Transaction narrative indicates cross-border activity requiring review.
+E-0292,D-0141,15,Screening result requires a secondary analyst assessment.
+E-0293,D-0142,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0294,D-0142,8,Corporate registry extract confirms directorship details.
+E-0295,D-0143,14,Corporate registry extract confirms directorship details.
+E-0296,D-0143,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0297,D-0144,11,Screening result requires a secondary analyst assessment.
+E-0298,D-0144,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0299,D-0144,3,Corporate registry extract confirms directorship details.
+E-0300,D-0145,16,Corporate registry extract confirms directorship details.
+E-0301,D-0145,14,Transaction narrative indicates cross-border activity requiring review.
+E-0302,D-0145,6,Corporate registry extract confirms directorship details.
+E-0303,D-0146,17,Corporate registry extract confirms directorship details.
+E-0304,D-0146,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0305,D-0146,11,Corporate registry extract confirms directorship details.
+E-0306,D-0147,12,Source-of-funds declaration has been received and indexed.
+E-0307,D-0147,5,Source-of-funds declaration has been received and indexed.
+E-0308,D-0147,11,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0309,D-0148,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0310,D-0148,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0311,D-0149,6,Transaction narrative indicates cross-border activity requiring review.
+E-0312,D-0150,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0313,D-0150,16,Corporate registry extract confirms directorship details.
+E-0314,D-0150,8,Screening result requires a secondary analyst assessment.
+E-0315,D-0151,2,Transaction narrative indicates cross-border activity requiring review.
+E-0316,D-0152,5,Screening result requires a secondary analyst assessment.
+E-0317,D-0153,13,Source-of-funds declaration has been received and indexed.
+E-0318,D-0153,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0319,D-0153,9,Source-of-funds declaration has been received and indexed.
+E-0320,D-0154,15,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0321,D-0154,16,Screening result requires a secondary analyst assessment.
+E-0322,D-0154,14,Corporate registry extract confirms directorship details.
+E-0323,D-0155,1,Source-of-funds declaration has been received and indexed.
+E-0324,D-0155,10,Transaction narrative indicates cross-border activity requiring review.
+E-0325,D-0156,15,Corporate registry extract confirms directorship details.
+E-0326,D-0156,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0327,D-0157,10,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0328,D-0157,2,Source-of-funds declaration has been received and indexed.
+E-0329,D-0157,12,Transaction narrative indicates cross-border activity requiring review.
+E-0330,D-0158,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0331,D-0158,8,Screening result requires a secondary analyst assessment.
+E-0332,D-0159,1,Screening result requires a secondary analyst assessment.
+E-0333,D-0159,16,Corporate registry extract confirms directorship details.
+E-0334,D-0160,3,Screening result requires a secondary analyst assessment.
+E-0335,D-0160,11,Source-of-funds declaration has been received and indexed.
+E-0336,D-0161,16,Transaction narrative indicates cross-border activity requiring review.
+E-0337,D-0161,9,Corporate registry extract confirms directorship details.
+E-0338,D-0161,11,Corporate registry extract confirms directorship details.
+E-0339,D-0162,11,Corporate registry extract confirms directorship details.
+E-0340,D-0162,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0341,D-0163,11,Corporate registry extract confirms directorship details.
+E-0342,D-0164,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0343,D-0164,6,Corporate registry extract confirms directorship details.
+E-0344,D-0164,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0345,D-0165,10,Source-of-funds declaration has been received and indexed.
+E-0346,D-0165,4,Source-of-funds declaration has been received and indexed.
+E-0347,D-0165,6,Corporate registry extract confirms directorship details.
+E-0348,D-0166,5,Source-of-funds declaration has been received and indexed.
+E-0349,D-0166,18,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0350,D-0166,8,Source-of-funds declaration has been received and indexed.
+E-0351,D-0167,10,Transaction narrative indicates cross-border activity requiring review.
+E-0352,D-0167,9,Corporate registry extract confirms directorship details.
+E-0353,D-0168,2,Corporate registry extract confirms directorship details.
+E-0354,D-0169,12,Transaction narrative indicates cross-border activity requiring review.
+E-0355,D-0169,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0356,D-0170,1,Transaction narrative indicates cross-border activity requiring review.
+E-0357,D-0170,14,Screening result requires a secondary analyst assessment.
+E-0358,D-0170,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0359,D-0171,10,Transaction narrative indicates cross-border activity requiring review.
+E-0360,D-0171,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0361,D-0171,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0362,D-0172,5,Transaction narrative indicates cross-border activity requiring review.
+E-0363,D-0172,1,Screening result requires a secondary analyst assessment.
+E-0364,D-0173,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0365,D-0174,2,Transaction narrative indicates cross-border activity requiring review.
+E-0366,D-0174,7,Source-of-funds declaration has been received and indexed.
+E-0367,D-0174,17,Screening result requires a secondary analyst assessment.
+E-0368,D-0175,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0369,D-0176,7,Screening result requires a secondary analyst assessment.
+E-0370,D-0176,8,Transaction narrative indicates cross-border activity requiring review.
+E-0371,D-0177,7,Transaction narrative indicates cross-border activity requiring review.
+E-0372,D-0177,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0373,D-0178,14,Corporate registry extract confirms directorship details.
+E-0374,D-0178,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0375,D-0178,10,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0376,D-0179,6,Source-of-funds declaration has been received and indexed.
+E-0377,D-0179,17,Screening result requires a secondary analyst assessment.
+E-0378,D-0179,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0379,D-0180,15,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0380,D-0181,8,Source-of-funds declaration has been received and indexed.
+E-0381,D-0181,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0382,D-0182,16,Source-of-funds declaration has been received and indexed.
+E-0383,D-0182,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0384,D-0183,6,Screening result requires a secondary analyst assessment.
+E-0385,D-0184,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0386,D-0184,11,Transaction narrative indicates cross-border activity requiring review.
+E-0387,D-0185,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0388,D-0186,12,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0389,D-0186,5,Transaction narrative indicates cross-border activity requiring review.
+E-0390,D-0186,15,Corporate registry extract confirms directorship details.
+E-0391,D-0187,17,Corporate registry extract confirms directorship details.
+E-0392,D-0188,10,Source-of-funds declaration has been received and indexed.
+E-0393,D-0188,8,Source-of-funds declaration has been received and indexed.
+E-0394,D-0189,17,Screening result requires a secondary analyst assessment.
+E-0395,D-0190,14,Corporate registry extract confirms directorship details.
+E-0396,D-0190,15,Source-of-funds declaration has been received and indexed.
+E-0397,D-0191,10,Source-of-funds declaration has been received and indexed.
+E-0398,D-0191,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0399,D-0191,7,Source-of-funds declaration has been received and indexed.
+E-0400,D-0192,3,Corporate registry extract confirms directorship details.
+E-0401,D-0192,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0402,D-0192,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0403,D-0193,18,Transaction narrative indicates cross-border activity requiring review.
+E-0404,D-0193,3,Source-of-funds declaration has been received and indexed.
+E-0405,D-0194,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0406,D-0194,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0407,D-0194,1,Screening result requires a secondary analyst assessment.
+E-0408,D-0195,16,Transaction narrative indicates cross-border activity requiring review.
+E-0409,D-0195,11,Transaction narrative indicates cross-border activity requiring review.
+E-0410,D-0196,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0411,D-0196,1,Transaction narrative indicates cross-border activity requiring review.
+E-0412,D-0197,6,Screening result requires a secondary analyst assessment.
+E-0413,D-0197,15,Transaction narrative indicates cross-border activity requiring review.
+E-0414,D-0197,9,Screening result requires a secondary analyst assessment.
+E-0415,D-0198,4,Screening result requires a secondary analyst assessment.
+E-0416,D-0198,14,Screening result requires a secondary analyst assessment.
+E-0417,D-0199,12,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0418,D-0199,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0419,D-0199,2,Corporate registry extract confirms directorship details.
+E-0420,D-0200,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0421,D-0201,11,Screening result requires a secondary analyst assessment.
+E-0422,D-0202,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0423,D-0203,8,Transaction narrative indicates cross-border activity requiring review.
+E-0424,D-0203,18,Corporate registry extract confirms directorship details.
+E-0425,D-0203,5,Transaction narrative indicates cross-border activity requiring review.
+E-0426,D-0204,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0427,D-0204,13,Screening result requires a secondary analyst assessment.
+E-0428,D-0205,3,Screening result requires a secondary analyst assessment.
+E-0429,D-0205,15,Screening result requires a secondary analyst assessment.
+E-0430,D-0206,5,Source-of-funds declaration has been received and indexed.
+E-0431,D-0206,1,Screening result requires a secondary analyst assessment.
+E-0432,D-0207,4,Screening result requires a secondary analyst assessment.
+E-0433,D-0207,17,Source-of-funds declaration has been received and indexed.
+E-0434,D-0208,17,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0435,D-0208,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0436,D-0208,13,Transaction narrative indicates cross-border activity requiring review.
+E-0437,D-0209,8,Corporate registry extract confirms directorship details.
+E-0438,D-0209,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0439,D-0209,1,Transaction narrative indicates cross-border activity requiring review.
+E-0440,D-0210,11,Source-of-funds declaration has been received and indexed.
+E-0441,D-0210,16,Transaction narrative indicates cross-border activity requiring review.
+E-0442,D-0210,7,Transaction narrative indicates cross-border activity requiring review.
+E-0443,D-0211,9,Source-of-funds declaration has been received and indexed.
+E-0444,D-0212,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0445,D-0212,13,Source-of-funds declaration has been received and indexed.
+E-0446,D-0212,1,Corporate registry extract confirms directorship details.
+E-0447,D-0213,1,Source-of-funds declaration has been received and indexed.
+E-0448,D-0214,14,Source-of-funds declaration has been received and indexed.
+E-0449,D-0214,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0450,D-0215,10,Corporate registry extract confirms directorship details.
+E-0451,D-0216,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0452,D-0216,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0453,D-0217,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0454,D-0217,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0455,D-0218,11,Corporate registry extract confirms directorship details.
+E-0456,D-0218,14,Corporate registry extract confirms directorship details.
+E-0457,D-0218,12,Screening result requires a secondary analyst assessment.
+E-0458,D-0219,9,Corporate registry extract confirms directorship details.
+E-0459,D-0219,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0460,D-0219,8,Source-of-funds declaration has been received and indexed.
+E-0461,D-0220,6,Source-of-funds declaration has been received and indexed.
+E-0462,D-0220,3,Screening result requires a secondary analyst assessment.
+E-0463,D-0221,8,Source-of-funds declaration has been received and indexed.
+E-0464,D-0221,15,Corporate registry extract confirms directorship details.
+E-0465,D-0222,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0466,D-0222,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0467,D-0223,11,Screening result requires a secondary analyst assessment.
+E-0468,D-0223,15,Screening result requires a secondary analyst assessment.
+E-0469,D-0223,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0470,D-0224,3,Transaction narrative indicates cross-border activity requiring review.
+E-0471,D-0225,11,Corporate registry extract confirms directorship details.
+E-0472,D-0226,5,Corporate registry extract confirms directorship details.
+E-0473,D-0226,10,Source-of-funds declaration has been received and indexed.
+E-0474,D-0226,18,Screening result requires a secondary analyst assessment.
+E-0475,D-0227,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0476,D-0227,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0477,D-0228,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0478,D-0229,12,Corporate registry extract confirms directorship details.
+E-0479,D-0229,4,Screening result requires a secondary analyst assessment.
+E-0480,D-0229,3,Source-of-funds declaration has been received and indexed.
+E-0481,D-0230,8,Source-of-funds declaration has been received and indexed.
+E-0482,D-0231,12,Source-of-funds declaration has been received and indexed.
+E-0483,D-0231,6,Screening result requires a secondary analyst assessment.
+E-0484,D-0231,5,Source-of-funds declaration has been received and indexed.
+E-0485,D-0232,7,Transaction narrative indicates cross-border activity requiring review.
+E-0486,D-0232,15,Transaction narrative indicates cross-border activity requiring review.
+E-0487,D-0232,9,Corporate registry extract confirms directorship details.
+E-0488,D-0233,4,Transaction narrative indicates cross-border activity requiring review.
+E-0489,D-0233,7,Corporate registry extract confirms directorship details.
+E-0490,D-0233,10,Corporate registry extract confirms directorship details.
+E-0491,D-0234,2,Source-of-funds declaration has been received and indexed.
+E-0492,D-0234,14,Source-of-funds declaration has been received and indexed.
+E-0493,D-0235,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0494,D-0235,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0495,D-0236,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0496,D-0236,14,Screening result requires a secondary analyst assessment.
+E-0497,D-0236,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0498,D-0237,16,Screening result requires a secondary analyst assessment.
+E-0499,D-0237,16,Corporate registry extract confirms directorship details.
+E-0500,D-0238,1,Source-of-funds declaration has been received and indexed.
+E-0501,D-0238,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0502,D-0238,11,Screening result requires a secondary analyst assessment.
+E-0503,D-0239,2,Screening result requires a secondary analyst assessment.
+E-0504,D-0239,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0505,D-0240,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0506,D-0240,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0507,D-0240,4,Source-of-funds declaration has been received and indexed.
+E-0508,D-0241,7,Screening result requires a secondary analyst assessment.
+E-0509,D-0241,14,Transaction narrative indicates cross-border activity requiring review.
+E-0510,D-0242,2,Transaction narrative indicates cross-border activity requiring review.
+E-0511,D-0243,9,Source-of-funds declaration has been received and indexed.
+E-0512,D-0244,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0513,D-0244,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0514,D-0245,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0515,D-0245,17,Screening result requires a secondary analyst assessment.
+E-0516,D-0246,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0517,D-0247,5,Corporate registry extract confirms directorship details.
+E-0518,D-0247,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0519,D-0247,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0520,D-0248,16,Source-of-funds declaration has been received and indexed.
+E-0521,D-0248,8,Transaction narrative indicates cross-border activity requiring review.
+E-0522,D-0249,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0523,D-0249,7,Source-of-funds declaration has been received and indexed.
+E-0524,D-0250,5,Screening result requires a secondary analyst assessment.
+E-0525,D-0250,11,Corporate registry extract confirms directorship details.
+E-0526,D-0251,11,Transaction narrative indicates cross-border activity requiring review.
+E-0527,D-0252,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0528,D-0252,5,Transaction narrative indicates cross-border activity requiring review.
+E-0529,D-0253,15,Corporate registry extract confirms directorship details.
+E-0530,D-0253,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0531,D-0253,16,Source-of-funds declaration has been received and indexed.
+E-0532,D-0254,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0533,D-0254,15,Screening result requires a secondary analyst assessment.
+E-0534,D-0254,1,Screening result requires a secondary analyst assessment.
+E-0535,D-0255,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0536,D-0255,12,Transaction narrative indicates cross-border activity requiring review.
+E-0537,D-0255,11,Screening result requires a secondary analyst assessment.
+E-0538,D-0256,8,Source-of-funds declaration has been received and indexed.
+E-0539,D-0257,1,Transaction narrative indicates cross-border activity requiring review.
+E-0540,D-0258,14,Corporate registry extract confirms directorship details.
+E-0541,D-0258,7,Source-of-funds declaration has been received and indexed.
+E-0542,D-0258,12,Transaction narrative indicates cross-border activity requiring review.
+E-0543,D-0259,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0544,D-0259,18,Screening result requires a secondary analyst assessment.
+E-0545,D-0259,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0546,D-0260,8,Screening result requires a secondary analyst assessment.
+E-0547,D-0260,16,Screening result requires a secondary analyst assessment.
+E-0548,D-0260,18,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0549,D-0261,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0550,D-0261,9,Corporate registry extract confirms directorship details.
+E-0551,D-0261,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0552,D-0262,7,Corporate registry extract confirms directorship details.
+E-0553,D-0263,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0554,D-0263,13,Corporate registry extract confirms directorship details.
+E-0555,D-0263,8,Corporate registry extract confirms directorship details.
+E-0556,D-0264,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0557,D-0264,8,Transaction narrative indicates cross-border activity requiring review.
+E-0558,D-0265,10,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0559,D-0266,2,Corporate registry extract confirms directorship details.
+E-0560,D-0266,2,Corporate registry extract confirms directorship details.
+E-0561,D-0266,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0562,D-0267,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0563,D-0267,13,Source-of-funds declaration has been received and indexed.
+E-0564,D-0267,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0565,D-0268,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0566,D-0268,2,Source-of-funds declaration has been received and indexed.
+E-0567,D-0269,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0568,D-0269,6,Transaction narrative indicates cross-border activity requiring review.
+E-0569,D-0270,15,Source-of-funds declaration has been received and indexed.
+E-0570,D-0271,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0571,D-0271,7,Transaction narrative indicates cross-border activity requiring review.
+E-0572,D-0271,9,Screening result requires a secondary analyst assessment.
+E-0573,D-0272,18,Transaction narrative indicates cross-border activity requiring review.
+E-0574,D-0273,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0575,D-0273,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0576,D-0273,11,Transaction narrative indicates cross-border activity requiring review.
+E-0577,D-0274,1,Screening result requires a secondary analyst assessment.
+E-0578,D-0275,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0579,D-0275,13,Screening result requires a secondary analyst assessment.
+E-0580,D-0276,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0581,D-0276,9,Corporate registry extract confirms directorship details.
+E-0582,D-0277,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0583,D-0277,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0584,D-0278,2,Transaction narrative indicates cross-border activity requiring review.
+E-0585,D-0279,16,Source-of-funds declaration has been received and indexed.
+E-0586,D-0279,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0587,D-0280,14,Transaction narrative indicates cross-border activity requiring review.
+E-0588,D-0281,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0589,D-0282,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0590,D-0283,15,Transaction narrative indicates cross-border activity requiring review.
+E-0591,D-0284,5,Source-of-funds declaration has been received and indexed.
+E-0592,D-0285,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0593,D-0286,6,Corporate registry extract confirms directorship details.
+E-0594,D-0286,10,Transaction narrative indicates cross-border activity requiring review.
+E-0595,D-0286,14,Corporate registry extract confirms directorship details.
+E-0596,D-0287,13,Transaction narrative indicates cross-border activity requiring review.
+E-0597,D-0287,6,Corporate registry extract confirms directorship details.
+E-0598,D-0287,9,Corporate registry extract confirms directorship details.
+E-0599,D-0288,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0600,D-0288,3,Source-of-funds declaration has been received and indexed.
+E-0601,D-0289,12,Screening result requires a secondary analyst assessment.
+E-0602,D-0289,6,Screening result requires a secondary analyst assessment.
+E-0603,D-0289,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0604,D-0290,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0605,D-0291,6,Screening result requires a secondary analyst assessment.
+E-0606,D-0291,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0607,D-0291,11,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0608,D-0292,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0609,D-0293,17,Source-of-funds declaration has been received and indexed.
+E-0610,D-0294,17,Screening result requires a secondary analyst assessment.
+E-0611,D-0294,11,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0612,D-0295,7,Source-of-funds declaration has been received and indexed.
+E-0613,D-0295,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0614,D-0296,17,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0615,D-0296,2,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0616,D-0297,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0617,D-0298,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0618,D-0298,13,Source-of-funds declaration has been received and indexed.
+E-0619,D-0299,11,Screening result requires a secondary analyst assessment.
+E-0620,D-0299,12,Source-of-funds declaration has been received and indexed.
+E-0621,D-0299,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0622,D-0300,9,Screening result requires a secondary analyst assessment.
+E-0623,D-0301,1,Corporate registry extract confirms directorship details.
+E-0624,D-0301,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0625,D-0301,18,Source-of-funds declaration has been received and indexed.
+E-0626,D-0302,13,Screening result requires a secondary analyst assessment.
+E-0627,D-0302,13,Transaction narrative indicates cross-border activity requiring review.
+E-0628,D-0302,9,Source-of-funds declaration has been received and indexed.
+E-0629,D-0303,16,Transaction narrative indicates cross-border activity requiring review.
+E-0630,D-0303,10,Screening result requires a secondary analyst assessment.
+E-0631,D-0304,17,Screening result requires a secondary analyst assessment.
+E-0632,D-0305,15,Source-of-funds declaration has been received and indexed.
+E-0633,D-0305,5,Transaction narrative indicates cross-border activity requiring review.
+E-0634,D-0305,15,Source-of-funds declaration has been received and indexed.
+E-0635,D-0306,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0636,D-0306,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0637,D-0306,1,Source-of-funds declaration has been received and indexed.
+E-0638,D-0307,8,Screening result requires a secondary analyst assessment.
+E-0639,D-0307,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0640,D-0307,7,Source-of-funds declaration has been received and indexed.
+E-0641,D-0308,16,Corporate registry extract confirms directorship details.
+E-0642,D-0309,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0643,D-0309,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0644,D-0309,17,Transaction narrative indicates cross-border activity requiring review.
+E-0645,D-0310,1,Corporate registry extract confirms directorship details.
+E-0646,D-0310,14,Screening result requires a secondary analyst assessment.
+E-0647,D-0310,12,Source-of-funds declaration has been received and indexed.
+E-0648,D-0311,11,Corporate registry extract confirms directorship details.
+E-0649,D-0311,9,Screening result requires a secondary analyst assessment.
+E-0650,D-0312,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0651,D-0312,3,Transaction narrative indicates cross-border activity requiring review.
+E-0652,D-0313,8,Screening result requires a secondary analyst assessment.
+E-0653,D-0314,2,Screening result requires a secondary analyst assessment.
+E-0654,D-0314,3,Corporate registry extract confirms directorship details.
+E-0655,D-0315,15,Corporate registry extract confirms directorship details.
+E-0656,D-0315,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0657,D-0315,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0658,D-0316,18,Transaction narrative indicates cross-border activity requiring review.
+E-0659,D-0317,17,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0660,D-0317,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0661,D-0318,7,Corporate registry extract confirms directorship details.
+E-0662,D-0318,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0663,D-0318,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0664,D-0319,16,Screening result requires a secondary analyst assessment.
+E-0665,D-0319,13,Screening result requires a secondary analyst assessment.
+E-0666,D-0320,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0667,D-0321,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0668,D-0321,10,Screening result requires a secondary analyst assessment.
+E-0669,D-0322,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0670,D-0322,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0671,D-0322,3,Screening result requires a secondary analyst assessment.
+E-0672,D-0323,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0673,D-0323,4,Corporate registry extract confirms directorship details.
+E-0674,D-0324,18,Screening result requires a secondary analyst assessment.
+E-0675,D-0325,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0676,D-0326,13,Transaction narrative indicates cross-border activity requiring review.
+E-0677,D-0327,2,Transaction narrative indicates cross-border activity requiring review.
+E-0678,D-0327,3,Transaction narrative indicates cross-border activity requiring review.
+E-0679,D-0328,6,Source-of-funds declaration has been received and indexed.
+E-0680,D-0328,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0681,D-0328,9,Screening result requires a secondary analyst assessment.
+E-0682,D-0329,9,Source-of-funds declaration has been received and indexed.
+E-0683,D-0329,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0684,D-0330,17,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0685,D-0330,8,Transaction narrative indicates cross-border activity requiring review.
+E-0686,D-0330,2,Transaction narrative indicates cross-border activity requiring review.
+E-0687,D-0331,17,Transaction narrative indicates cross-border activity requiring review.
+E-0688,D-0331,13,Transaction narrative indicates cross-border activity requiring review.
+E-0689,D-0331,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0690,D-0332,9,Source-of-funds declaration has been received and indexed.
+E-0691,D-0332,16,Screening result requires a secondary analyst assessment.
+E-0692,D-0332,17,Transaction narrative indicates cross-border activity requiring review.
+E-0693,D-0333,5,Screening result requires a secondary analyst assessment.
+E-0694,D-0333,8,Source-of-funds declaration has been received and indexed.
+E-0695,D-0334,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0696,D-0334,7,Transaction narrative indicates cross-border activity requiring review.
+E-0697,D-0335,2,Source-of-funds declaration has been received and indexed.
+E-0698,D-0335,18,Source-of-funds declaration has been received and indexed.
+E-0699,D-0336,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0700,D-0336,8,Corporate registry extract confirms directorship details.
+E-0701,D-0336,10,Source-of-funds declaration has been received and indexed.
+E-0702,D-0337,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0703,D-0337,6,Source-of-funds declaration has been received and indexed.
+E-0704,D-0338,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0705,D-0338,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0706,D-0338,5,Corporate registry extract confirms directorship details.
+E-0707,D-0339,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0708,D-0339,5,Transaction narrative indicates cross-border activity requiring review.
+E-0709,D-0339,4,Corporate registry extract confirms directorship details.
+E-0710,D-0340,8,Transaction narrative indicates cross-border activity requiring review.
+E-0711,D-0341,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0712,D-0341,11,Transaction narrative indicates cross-border activity requiring review.
+E-0713,D-0342,8,Screening result requires a secondary analyst assessment.
+E-0714,D-0343,7,Source-of-funds declaration has been received and indexed.
+E-0715,D-0343,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0716,D-0344,14,Transaction narrative indicates cross-border activity requiring review.
+E-0717,D-0345,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0718,D-0345,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0719,D-0346,3,Corporate registry extract confirms directorship details.
+E-0720,D-0346,11,Screening result requires a secondary analyst assessment.
+E-0721,D-0346,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0722,D-0347,5,Corporate registry extract confirms directorship details.
+E-0723,D-0348,15,Screening result requires a secondary analyst assessment.
+E-0724,D-0348,12,Corporate registry extract confirms directorship details.
+E-0725,D-0349,18,Transaction narrative indicates cross-border activity requiring review.
+E-0726,D-0350,3,Transaction narrative indicates cross-border activity requiring review.
+E-0727,D-0350,15,Transaction narrative indicates cross-border activity requiring review.
+E-0728,D-0351,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0729,D-0352,14,Corporate registry extract confirms directorship details.
+E-0730,D-0352,7,Source-of-funds declaration has been received and indexed.
+E-0731,D-0353,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0732,D-0353,14,Transaction narrative indicates cross-border activity requiring review.
+E-0733,D-0353,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0734,D-0354,17,Screening result requires a secondary analyst assessment.
+E-0735,D-0354,6,Source-of-funds declaration has been received and indexed.
+E-0736,D-0354,3,Source-of-funds declaration has been received and indexed.
+E-0737,D-0355,7,Transaction narrative indicates cross-border activity requiring review.
+E-0738,D-0356,14,Source-of-funds declaration has been received and indexed.
+E-0739,D-0357,8,Transaction narrative indicates cross-border activity requiring review.
+E-0740,D-0357,8,Source-of-funds declaration has been received and indexed.
+E-0741,D-0357,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0742,D-0358,12,Corporate registry extract confirms directorship details.
+E-0743,D-0359,3,Transaction narrative indicates cross-border activity requiring review.
+E-0744,D-0359,4,Transaction narrative indicates cross-border activity requiring review.
+E-0745,D-0359,1,Source-of-funds declaration has been received and indexed.
+E-0746,D-0360,1,Corporate registry extract confirms directorship details.
+E-0747,D-0360,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0748,D-0361,2,Source-of-funds declaration has been received and indexed.
+E-0749,D-0361,16,Source-of-funds declaration has been received and indexed.
+E-0750,D-0362,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0751,D-0362,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0752,D-0363,16,Source-of-funds declaration has been received and indexed.
+E-0753,D-0364,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0754,D-0364,18,Source-of-funds declaration has been received and indexed.
+E-0755,D-0365,3,Source-of-funds declaration has been received and indexed.
+E-0756,D-0365,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0757,D-0365,14,Screening result requires a secondary analyst assessment.
+E-0758,D-0366,4,Screening result requires a secondary analyst assessment.
+E-0759,D-0367,8,Source-of-funds declaration has been received and indexed.
+E-0760,D-0368,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0761,D-0369,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0762,D-0370,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0763,D-0371,11,Corporate registry extract confirms directorship details.
+E-0764,D-0371,15,Screening result requires a secondary analyst assessment.
+E-0765,D-0371,14,Source-of-funds declaration has been received and indexed.
+E-0766,D-0372,17,Screening result requires a secondary analyst assessment.
+E-0767,D-0372,14,Source-of-funds declaration has been received and indexed.
+E-0768,D-0372,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0769,D-0373,9,Source-of-funds declaration has been received and indexed.
+E-0770,D-0374,10,Source-of-funds declaration has been received and indexed.
+E-0771,D-0374,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0772,D-0374,12,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0773,D-0375,12,Screening result requires a secondary analyst assessment.
+E-0774,D-0375,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0775,D-0375,14,Source-of-funds declaration has been received and indexed.
+E-0776,D-0376,3,Screening result requires a secondary analyst assessment.
+E-0777,D-0376,12,Transaction narrative indicates cross-border activity requiring review.
+E-0778,D-0376,17,Corporate registry extract confirms directorship details.
+E-0779,D-0377,14,Source-of-funds declaration has been received and indexed.
+E-0780,D-0378,7,Source-of-funds declaration has been received and indexed.
+E-0781,D-0378,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0782,D-0378,10,Screening result requires a secondary analyst assessment.
+E-0783,D-0379,18,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0784,D-0379,3,Transaction narrative indicates cross-border activity requiring review.
+E-0785,D-0379,10,Transaction narrative indicates cross-border activity requiring review.
+E-0786,D-0380,13,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0787,D-0380,10,Screening result requires a secondary analyst assessment.
+E-0788,D-0381,11,Transaction narrative indicates cross-border activity requiring review.
+E-0789,D-0382,11,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0790,D-0383,5,Screening result requires a secondary analyst assessment.
+E-0791,D-0383,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0792,D-0383,7,Source-of-funds declaration has been received and indexed.
+E-0793,D-0384,1,Transaction narrative indicates cross-border activity requiring review.
+E-0794,D-0384,5,Transaction narrative indicates cross-border activity requiring review.
+E-0795,D-0384,5,Transaction narrative indicates cross-border activity requiring review.
+E-0796,D-0385,1,Screening result requires a secondary analyst assessment.
+E-0797,D-0385,17,Transaction narrative indicates cross-border activity requiring review.
+E-0798,D-0386,3,Source-of-funds declaration has been received and indexed.
+E-0799,D-0386,10,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0800,D-0387,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0801,D-0387,15,Source-of-funds declaration has been received and indexed.
+E-0802,D-0387,13,Transaction narrative indicates cross-border activity requiring review.
+E-0803,D-0388,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0804,D-0388,3,Screening result requires a secondary analyst assessment.
+E-0805,D-0388,15,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0806,D-0389,15,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0807,D-0389,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0808,D-0390,10,Transaction narrative indicates cross-border activity requiring review.
+E-0809,D-0390,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0810,D-0390,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0811,D-0391,10,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0812,D-0391,17,Corporate registry extract confirms directorship details.
+E-0813,D-0391,13,Transaction narrative indicates cross-border activity requiring review.
+E-0814,D-0392,15,Screening result requires a secondary analyst assessment.
+E-0815,D-0393,9,Corporate registry extract confirms directorship details.
+E-0816,D-0393,12,Transaction narrative indicates cross-border activity requiring review.
+E-0817,D-0393,18,Corporate registry extract confirms directorship details.
+E-0818,D-0394,15,Screening result requires a secondary analyst assessment.
+E-0819,D-0395,16,Transaction narrative indicates cross-border activity requiring review.
+E-0820,D-0395,17,Corporate registry extract confirms directorship details.
+E-0821,D-0395,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0822,D-0396,2,Transaction narrative indicates cross-border activity requiring review.
+E-0823,D-0396,11,Screening result requires a secondary analyst assessment.
+E-0824,D-0396,17,Source-of-funds declaration has been received and indexed.
+E-0825,D-0397,3,Transaction narrative indicates cross-border activity requiring review.
+E-0826,D-0397,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0827,D-0398,13,Corporate registry extract confirms directorship details.
+E-0828,D-0398,17,Transaction narrative indicates cross-border activity requiring review.
+E-0829,D-0398,12,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0830,D-0399,17,Source-of-funds declaration has been received and indexed.
+E-0831,D-0399,9,Screening result requires a secondary analyst assessment.
+E-0832,D-0399,12,Screening result requires a secondary analyst assessment.
+E-0833,D-0400,6,Screening result requires a secondary analyst assessment.
+E-0834,D-0400,8,Screening result requires a secondary analyst assessment.
+E-0835,D-0400,13,Transaction narrative indicates cross-border activity requiring review.
+E-0836,D-0401,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0837,D-0401,15,Corporate registry extract confirms directorship details.
+E-0838,D-0401,5,Screening result requires a secondary analyst assessment.
+E-0839,D-0402,15,Corporate registry extract confirms directorship details.
+E-0840,D-0402,18,Source-of-funds declaration has been received and indexed.
+E-0841,D-0403,12,Corporate registry extract confirms directorship details.
+E-0842,D-0403,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0843,D-0404,13,Transaction narrative indicates cross-border activity requiring review.
+E-0844,D-0405,7,Corporate registry extract confirms directorship details.
+E-0845,D-0405,13,Transaction narrative indicates cross-border activity requiring review.
+E-0846,D-0405,5,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0847,D-0406,10,Transaction narrative indicates cross-border activity requiring review.
+E-0848,D-0406,14,Transaction narrative indicates cross-border activity requiring review.
+E-0849,D-0407,3,Source-of-funds declaration has been received and indexed.
+E-0850,D-0408,17,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0851,D-0408,1,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0852,D-0408,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0853,D-0409,5,Corporate registry extract confirms directorship details.
+E-0854,D-0409,5,Source-of-funds declaration has been received and indexed.
+E-0855,D-0410,4,Source-of-funds declaration has been received and indexed.
+E-0856,D-0410,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0857,D-0410,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0858,D-0411,7,Corporate registry extract confirms directorship details.
+E-0859,D-0411,17,Source-of-funds declaration has been received and indexed.
+E-0860,D-0411,17,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0861,D-0412,13,Transaction narrative indicates cross-border activity requiring review.
+E-0862,D-0412,10,Screening result requires a secondary analyst assessment.
+E-0863,D-0413,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0864,D-0414,5,Transaction narrative indicates cross-border activity requiring review.
+E-0865,D-0414,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0866,D-0415,10,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0867,D-0416,3,Screening result requires a secondary analyst assessment.
+E-0868,D-0416,16,Source-of-funds declaration has been received and indexed.
+E-0869,D-0416,5,Source-of-funds declaration has been received and indexed.
+E-0870,D-0417,18,Transaction narrative indicates cross-border activity requiring review.
+E-0871,D-0418,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0872,D-0418,12,Transaction narrative indicates cross-border activity requiring review.
+E-0873,D-0418,15,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0874,D-0419,17,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0875,D-0420,16,Screening result requires a secondary analyst assessment.
+E-0876,D-0420,16,Screening result requires a secondary analyst assessment.
+E-0877,D-0420,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0878,D-0421,6,Transaction narrative indicates cross-border activity requiring review.
+E-0879,D-0421,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0880,D-0421,5,Transaction narrative indicates cross-border activity requiring review.
+E-0881,D-0422,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0882,D-0423,12,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0883,D-0423,15,Source-of-funds declaration has been received and indexed.
+E-0884,D-0423,11,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0885,D-0424,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0886,D-0425,10,Source-of-funds declaration has been received and indexed.
+E-0887,D-0426,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0888,D-0427,7,Source-of-funds declaration has been received and indexed.
+E-0889,D-0428,5,Corporate registry extract confirms directorship details.
+E-0890,D-0428,12,Corporate registry extract confirms directorship details.
+E-0891,D-0428,4,Screening result requires a secondary analyst assessment.
+E-0892,D-0429,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0893,D-0430,15,Screening result requires a secondary analyst assessment.
+E-0894,D-0431,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0895,D-0431,3,Source-of-funds declaration has been received and indexed.
+E-0896,D-0432,2,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0897,D-0433,11,Transaction narrative indicates cross-border activity requiring review.
+E-0898,D-0433,18,Transaction narrative indicates cross-border activity requiring review.
+E-0899,D-0433,8,Transaction narrative indicates cross-border activity requiring review.
+E-0900,D-0434,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0901,D-0434,8,Transaction narrative indicates cross-border activity requiring review.
+E-0902,D-0435,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0903,D-0435,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0904,D-0436,5,Screening result requires a secondary analyst assessment.
+E-0905,D-0436,3,Source-of-funds declaration has been received and indexed.
+E-0906,D-0436,5,Corporate registry extract confirms directorship details.
+E-0907,D-0437,15,Source-of-funds declaration has been received and indexed.
+E-0908,D-0437,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0909,D-0438,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0910,D-0438,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0911,D-0438,6,Screening result requires a secondary analyst assessment.
+E-0912,D-0439,3,Screening result requires a secondary analyst assessment.
+E-0913,D-0439,10,Corporate registry extract confirms directorship details.
+E-0914,D-0439,18,Source-of-funds declaration has been received and indexed.
+E-0915,D-0440,11,Screening result requires a secondary analyst assessment.
+E-0916,D-0440,9,Source-of-funds declaration has been received and indexed.
+E-0917,D-0441,14,Screening result requires a secondary analyst assessment.
+E-0918,D-0442,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0919,D-0442,4,Transaction narrative indicates cross-border activity requiring review.
+E-0920,D-0443,9,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0921,D-0443,12,Corporate registry extract confirms directorship details.
+E-0922,D-0444,9,Transaction narrative indicates cross-border activity requiring review.
+E-0923,D-0444,17,Corporate registry extract confirms directorship details.
+E-0924,D-0444,16,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0925,D-0445,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0926,D-0446,7,Source-of-funds declaration has been received and indexed.
+E-0927,D-0446,13,Source-of-funds declaration has been received and indexed.
+E-0928,D-0447,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0929,D-0447,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0930,D-0448,10,Screening result requires a secondary analyst assessment.
+E-0931,D-0448,5,Transaction narrative indicates cross-border activity requiring review.
+E-0932,D-0448,14,Screening result requires a secondary analyst assessment.
+E-0933,D-0449,6,Transaction narrative indicates cross-border activity requiring review.
+E-0934,D-0450,2,Corporate registry extract confirms directorship details.
+E-0935,D-0450,13,Screening result requires a secondary analyst assessment.
+E-0936,D-0450,15,Transaction narrative indicates cross-border activity requiring review.
+E-0937,D-0451,9,Screening result requires a secondary analyst assessment.
+E-0938,D-0451,4,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0939,D-0452,8,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0940,D-0453,9,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0941,D-0453,3,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0942,D-0453,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0943,D-0454,4,Screening result requires a secondary analyst assessment.
+E-0944,D-0454,6,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0945,D-0455,6,Corporate registry extract confirms directorship details.
+E-0946,D-0455,18,Corporate registry extract confirms directorship details.
+E-0947,D-0456,17,Source-of-funds declaration has been received and indexed.
+E-0948,D-0456,12,Source-of-funds declaration has been received and indexed.
+E-0949,D-0457,14,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0950,D-0457,5,Source-of-funds declaration has been received and indexed.
+E-0951,D-0458,11,Transaction narrative indicates cross-border activity requiring review.
+E-0952,D-0458,4,Corporate registry extract confirms directorship details.
+E-0953,D-0458,14,Screening result requires a secondary analyst assessment.
+E-0954,D-0459,11,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0955,D-0460,8,Source-of-funds declaration has been received and indexed.
+E-0956,D-0461,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0957,D-0461,5,Source-of-funds declaration has been received and indexed.
+E-0958,D-0462,2,Transaction narrative indicates cross-border activity requiring review.
+E-0959,D-0462,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0960,D-0463,16,Source-of-funds declaration has been received and indexed.
+E-0961,D-0463,4,Transaction narrative indicates cross-border activity requiring review.
+E-0962,D-0463,17,Transaction narrative indicates cross-border activity requiring review.
+E-0963,D-0464,1,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0964,D-0464,6,Corporate registry extract confirms directorship details.
+E-0965,D-0465,17,Source-of-funds declaration has been received and indexed.
+E-0966,D-0465,4,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0967,D-0466,3,Source-of-funds declaration has been received and indexed.
+E-0968,D-0466,12,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0969,D-0466,10,Source-of-funds declaration has been received and indexed.
+E-0970,D-0467,1,Transaction narrative indicates cross-border activity requiring review.
+E-0971,D-0468,3,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0972,D-0468,12,Transaction narrative indicates cross-border activity requiring review.
+E-0973,D-0468,15,Screening result requires a secondary analyst assessment.
+E-0974,D-0469,13,Source-of-funds declaration has been received and indexed.
+E-0975,D-0469,4,Screening result requires a secondary analyst assessment.
+E-0976,D-0469,6,Transaction narrative indicates cross-border activity requiring review.
+E-0977,D-0470,14,Transaction narrative indicates cross-border activity requiring review.
+E-0978,D-0470,12,Corporate registry extract confirms directorship details.
+E-0979,D-0470,8,Transaction narrative indicates cross-border activity requiring review.
+E-0980,D-0471,5,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0981,D-0471,18,Source-of-funds declaration has been received and indexed.
+E-0982,D-0471,12,Screening result requires a secondary analyst assessment.
+E-0983,D-0472,16,Screening result requires a secondary analyst assessment.
+E-0984,D-0473,18,Corporate registry extract confirms directorship details.
+E-0985,D-0473,6,Source-of-funds declaration has been received and indexed.
+E-0986,D-0474,9,Transaction narrative indicates cross-border activity requiring review.
+E-0987,D-0475,3,Transaction narrative indicates cross-border activity requiring review.
+E-0988,D-0475,6,Corporate registry extract confirms directorship details.
+E-0989,D-0475,7,Source-of-funds declaration has been received and indexed.
+E-0990,D-0476,6,Source-of-funds declaration has been received and indexed.
+E-0991,D-0476,1,Corporate registry extract confirms directorship details.
+E-0992,D-0476,6,Transaction narrative indicates cross-border activity requiring review.
+E-0993,D-0477,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-0994,D-0477,15,Transaction narrative indicates cross-border activity requiring review.
+E-0995,D-0478,15,Corporate registry extract confirms directorship details.
+E-0996,D-0478,9,Onboarding questionnaire records elevated jurisdiction exposure.
+E-0997,D-0478,6,Transaction narrative indicates cross-border activity requiring review.
+E-0998,D-0479,8,Screening result requires a secondary analyst assessment.
+E-0999,D-0479,18,Onboarding questionnaire records elevated jurisdiction exposure.
+E-1000,D-0479,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-1001,D-0480,7,Onboarding questionnaire records elevated jurisdiction exposure.
+E-1002,D-0480,11,Screening result requires a secondary analyst assessment.
+E-1003,D-0481,7,Source-of-funds declaration has been received and indexed.
+E-1004,D-0482,18,Beneficial owner identity confirmed against a synthetic registry extract.
+E-1005,D-0482,12,Source-of-funds declaration has been received and indexed.
+E-1006,D-0482,7,Screening result requires a secondary analyst assessment.
+E-1007,D-0483,7,Corporate registry extract confirms directorship details.
+E-1008,D-0483,16,Source-of-funds declaration has been received and indexed.
+E-1009,D-0484,4,Source-of-funds declaration has been received and indexed.
+E-1010,D-0485,7,Beneficial owner identity confirmed against a synthetic registry extract.
+E-1011,D-0485,13,Corporate registry extract confirms directorship details.
+E-1012,D-0485,8,Beneficial owner identity confirmed against a synthetic registry extract.
+E-1013,D-0486,17,Screening result requires a secondary analyst assessment.
+E-1014,D-0486,2,Source-of-funds declaration has been received and indexed.
+E-1015,D-0486,6,Beneficial owner identity confirmed against a synthetic registry extract.
+E-1016,D-0487,13,Beneficial owner identity confirmed against a synthetic registry extract.
+E-1017,D-0487,8,Corporate registry extract confirms directorship details.
+E-1018,D-0488,12,Source-of-funds declaration has been received and indexed.
+E-1019,D-0489,14,Source-of-funds declaration has been received and indexed.
+E-1020,D-0489,14,Beneficial owner identity confirmed against a synthetic registry extract.
+E-1021,D-0490,9,Transaction narrative indicates cross-border activity requiring review.
+E-1022,D-0490,10,Onboarding questionnaire records elevated jurisdiction exposure.
+E-1023,D-0490,14,Corporate registry extract confirms directorship details.
+E-1024,D-0491,10,Corporate registry extract confirms directorship details.
+E-1025,D-0491,16,Onboarding questionnaire records elevated jurisdiction exposure.
+E-1026,D-0492,16,Screening result requires a secondary analyst assessment.
+E-1027,D-0492,14,Screening result requires a secondary analyst assessment.
+E-1028,D-0493,1,Corporate registry extract confirms directorship details.
+E-1029,D-0494,7,Corporate registry extract confirms directorship details.

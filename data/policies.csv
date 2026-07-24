@@ -17,3 +17,33 @@ POL-VAS-01,Compliance,Virtual asset transfers require wallet attribution checks,
 POL-STR-01,Compliance,Suspicious transaction reports filed within regulatory deadline,2024-05,REG-014
 POL-AML-03,Compliance,Adverse media screening for all new corporate clients,2024-05,REG-001
 POL-KYC-03,Onboarding,Customer identity re-verification every 24 months,2024-05,REG-002
+POL-SAN-03,Compliance,Sanctions screening is mandatory for all counterparties.,2024-04,REG-003
+POL-PEP-04,Compliance,Politically exposed persons require enhanced review.,2025-05,REG-004
+POL-BEN-05,Onboarding,Corporate beneficial ownership must be verified before activation.,2026-06,REG-005
+POL-WIR-06,Compliance,Cross-border wire transfers require secondary approval.,2024-07,REG-006
+POL-MAR-07,Compliance,Potential market-abuse patterns must be escalated for review.,2025-08,REG-007
+POL-BRB-08,Compliance,High-value engagements require anti-bribery control checks.,2026-09,REG-008
+POL-AML-09,Compliance,Enhanced due diligence is required for high-risk clients.,2024-10,REG-009
+POL-KYC-10,Onboarding,Customer risk profiles must be refreshed when risk indicators change.,2025-11,REG-010
+POL-SAN-11,Compliance,Sanctions screening is mandatory for all counterparties.,2026-12,REG-011
+POL-PEP-12,Compliance,Politically exposed persons require enhanced review.,2024-01,REG-012
+POL-BEN-13,Onboarding,Corporate beneficial ownership must be verified before activation.,2025-02,REG-013
+POL-WIR-14,Compliance,Cross-border wire transfers require secondary approval.,2026-03,REG-014
+POL-MAR-15,Compliance,Potential market-abuse patterns must be escalated for review.,2024-04,REG-015
+POL-BRB-16,Compliance,High-value engagements require anti-bribery control checks.,2025-05,REG-016
+POL-AML-17,Compliance,Enhanced due diligence is required for high-risk clients.,2026-06,REG-017
+POL-KYC-18,Onboarding,Customer risk profiles must be refreshed when risk indicators change.,2024-07,REG-018
+POL-SAN-19,Compliance,Sanctions screening is mandatory for all counterparties.,2025-08,REG-001
+POL-PEP-20,Compliance,Politically exposed persons require enhanced review.,2026-09,REG-002
+POL-BEN-21,Onboarding,Corporate beneficial ownership must be verified before activation.,2024-10,REG-003
+POL-WIR-22,Compliance,Cross-border wire transfers require secondary approval.,2025-11,REG-004
+POL-MAR-23,Compliance,Potential market-abuse patterns must be escalated for review.,2026-12,REG-005
+POL-BRB-24,Compliance,High-value engagements require anti-bribery control checks.,2024-01,REG-006
+POL-AML-25,Compliance,Enhanced due diligence is required for high-risk clients.,2025-02,REG-007
+POL-KYC-26,Onboarding,Customer risk profiles must be refreshed when risk indicators change.,2026-03,REG-008
+POL-SAN-27,Compliance,Sanctions screening is mandatory for all counterparties.,2024-04,REG-009
+POL-PEP-28,Compliance,Politically exposed persons require enhanced review.,2025-05,REG-010
+POL-BEN-29,Onboarding,Corporate beneficial ownership must be verified before activation.,2026-06,REG-011
+POL-WIR-30,Compliance,Cross-border wire transfers require secondary approval.,2024-07,REG-012
+POL-MAR-31,Compliance,Potential market-abuse patterns must be escalated for review.,2025-08,REG-013
+POL-BRB-32,Compliance,High-value engagements require anti-bribery control checks.,2026-09,REG-014
