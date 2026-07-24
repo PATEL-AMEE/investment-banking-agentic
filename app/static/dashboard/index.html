@@ -130,11 +130,11 @@
   <div class="eyebrow">Platform state</div>
   <div class="kpis" id="kpis"></div>
 
-  <div class="eyebrow">Compliance decisions across all demo clients</div>
+  <div class="eyebrow">Compliance decisions</div>
   <div class="cols">
     <div class="card">
       <h3>Client risk decisions</h3>
-      <p class="cap">Each client run through the real compliance workflow (read-only scan)</p>
+      <p class="cap">A sample of clients run through the real compliance workflow (read-only scan)</p>
       <div class="barline" id="decBar"></div>
       <div class="legend" style="margin-bottom:12px">
         <span><i class="sw" style="background:var(--good)"></i>pass</span>
@@ -155,8 +155,7 @@
         <p class="cap">Human-in-the-loop tasks created by real inspect calls</p>
         <div class="kv"><span>Pending</span><b id="revPending" class="num">–</b></div>
         <div class="kv"><span>Resolved</span><b id="revResolved" class="num">–</b></div>
-        <div id="revList" style="margin-top:10px"></div>
-        <a class="btn" id="openReviews" href="/reviewer" style="margin-top:12px;display:inline-block;text-decoration:none">Open full review queue →</a>
+        <a class="btn" href="/reviewer" style="margin-top:12px;display:inline-block;text-decoration:none">Open review queue →</a>
       </div>
 
       <div class="card">
@@ -168,32 +167,20 @@
   </div>
 
   <div class="eyebrow">Try the agents live</div>
-  <div class="cols">
-    <div class="card">
-      <h3>KYC / AML onboarding</h3>
-      <p class="cap">Posts to <span class="idc">/api/agents/onboarding/kyc</span> and shows the real result</p>
-      <form class="try" id="kycForm">
-        <div class="row">
-          <div class="field" style="flex:1"><label>Client name</label><input type="text" id="kycName" value="Globex Ltd"></div>
-          <div class="field" style="width:110px"><label>Jurisdiction</label>
-            <select id="kycJur"><option>US</option><option>GB</option><option>IR</option><option>SY</option><option>KP</option></select>
-          </div>
+  <div class="card">
+    <h3>KYC / AML onboarding</h3>
+    <p class="cap">Posts to <span class="idc">/api/agents/onboarding/kyc</span> and shows the real result · for policy Q&amp;A use <a href="/chat">Copilot chat</a></p>
+    <form class="try" id="kycForm">
+      <div class="row">
+        <div class="field" style="flex:1"><label>Client name</label><input type="text" id="kycName" value="Globex Ltd"></div>
+        <div class="field" style="width:110px"><label>Jurisdiction</label>
+          <select id="kycJur"><option>US</option><option>GB</option><option>IR</option><option>SY</option><option>KP</option></select>
         </div>
-        <label class="check"><input type="checkbox" id="kycPep" checked> Include a PEP beneficial owner (Jane Doe)</label>
-        <div class="row"><button class="btn pri" type="submit">Run KYC check</button></div>
-      </form>
-      <div class="result" id="kycResult"></div>
-    </div>
-
-    <div class="card">
-      <h3>Compliance copilot</h3>
-      <p class="cap">Posts to <span class="idc">/api/copilot/query</span> — real citation retrieval</p>
-      <form class="try" id="copForm">
-        <div class="field"><label>Question</label><input type="text" id="copQ" value="suspicious activity reporting requirements"></div>
-        <div class="row"><button class="btn pri" type="submit">Ask copilot</button></div>
-      </form>
-      <div class="result" id="copResult"></div>
-    </div>
+      </div>
+      <label class="check"><input type="checkbox" id="kycPep" checked> Include a PEP beneficial owner (Jane Doe)</label>
+      <div class="row"><button class="btn pri" type="submit">Run KYC check</button></div>
+    </form>
+    <div class="result" id="kycResult"></div>
   </div>
 
   <footer id="footer">Live view served by your FastAPI app. Numbers come from the demo CSVs in <span class="idc">data/</span> — small by design.</footer>
@@ -242,7 +229,6 @@ async function load() {
 
   $('#revPending').textContent = d.reviews.pending;
   $('#revResolved').textContent = d.reviews.resolved;
-  renderReviews();
 
   const ev = d.audit.recent||[];
   $('#auditList').innerHTML = ev.length ? ev.map(e=>`<div class="ev">
@@ -250,52 +236,6 @@ async function load() {
     <div class="d">${esc(e.actor_id)} → ${esc(e.resource_id||'')}</div>
     <div class="ts">${esc(e.timestamp)}</div></div>`).join('')
     : '<div class="empty">No audit events yet — run a check below.</div>';
-}
-
-// Inline review queue: a risk manager can approve/reject right here.
-async function renderReviews() {
-  const listEl = $('#revList');
-  if (!listEl) return;
-  const roles = (window.ibAuth && window.ibAuth.roles) || [];
-  // Risk managers/reviewers can act; so can anonymous dev use. View-only roles
-  // (compliance analyst, executive) see the list without action buttons.
-  const viewOnly = roles.length && !roles.includes('risk_manager') && !roles.includes('reviewer');
-  let items = [];
-  try { items = await (await fetch('/api/reviews/pending')).json(); }
-  catch (e) { listEl.innerHTML = '<div class="empty">Could not load reviews.</div>'; return; }
-  if (!Array.isArray(items) || !items.length) {
-    listEl.innerHTML = '<div class="empty">No pending reviews right now 🎉</div>'; return;
-  }
-  listEl.innerHTML = items.slice(0, 8).map(r => `
-    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--grid)">
-      <div style="min-width:0">
-        <b class="idc">${esc(r.review_id)}</b>
-        <span class="pill ${r.severity==='high'?'crit':'warn'}">${esc(r.severity)}</span>
-        <div class="d" style="font-size:12px;color:var(--muted);margin-top:2px">${esc(r.reason)} · ${esc(r.client_id)}</div>
-      </div>
-      ${viewOnly ? '' : `<div style="display:flex;gap:6px;flex:none">
-        <button class="btn rvAct" data-id="${esc(r.review_id)}" data-dec="approve" style="background:var(--good);color:#fff;border-color:transparent;padding:6px 11px">Approve</button>
-        <button class="btn rvAct" data-id="${esc(r.review_id)}" data-dec="reject" style="background:var(--critical);color:#fff;border-color:transparent;padding:6px 11px">Reject</button>
-      </div>`}
-    </div>`).join('') +
-    (items.length > 8 ? `<div class="d" style="font-size:12px;margin-top:8px">+ ${items.length - 8} more — <a href="/reviewer">open full queue →</a></div>` : '');
-  listEl.querySelectorAll('.rvAct').forEach(b => b.onclick = () => resolveReview(b.dataset.id, b.dataset.dec, b));
-}
-
-async function resolveReview(id, decision, btn) {
-  const reviewer = (window.ibAuth && window.ibAuth.user) || 'dashboard';
-  if (btn) { btn.disabled = true; btn.textContent = decision === 'approve' ? 'Approving…' : 'Rejecting…'; }
-  const res = await fetch(`/api/reviews/${id}/resolve`, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ decision, reviewer }),
-  });
-  if (!res.ok) {
-    const msg = res.status === 403 ? 'You do not have permission to resolve reviews.' : ('Could not ' + decision + ' (HTTP ' + res.status + ')');
-    alert(msg);
-    if (btn) { btn.disabled = false; btn.textContent = decision === 'approve' ? 'Approve' : 'Reject'; }
-    return;
-  }
-  load(); // refresh counts, decisions table, and the review list
 }
 
 $('#refresh').onclick = load;
@@ -315,24 +255,7 @@ $('#kycForm').onsubmit = async e => {
   load();
 };
 
-$('#copForm').onsubmit = async e => {
-  e.preventDefault();
-  const r = await (await fetch('/api/copilot/query',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:$('#copQ').value})})).json();
-  const box = $('#copResult'); box.classList.add('show');
-  box.innerHTML = `<div style="margin-bottom:6px">${esc(r.answer)}</div>` +
-    (r.citations||[]).map(c=>`<div class="cite"><b>${esc(c.source_id)}</b><br><small>${esc(c.excerpt)}</small></div>`).join('');
-};
-
 load();
-</script>
-<script>
-  // Role-aware label: risk managers approve/escalate; other staff view only.
-  (function () {
-    const roles = (window.ibAuth && window.ibAuth.roles) || [];
-    const canResolve = roles.includes("risk_manager") || roles.includes("reviewer");
-    const btn = document.getElementById("openReviews");
-    if (btn && canResolve) btn.textContent = "Open review queue → approve / escalate";
-  })();
 </script>
 </body>
 </html>

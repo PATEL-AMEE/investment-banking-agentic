@@ -118,6 +118,14 @@ class GraphStore:
     def get_client(self, client_id: str) -> Dict[str, Any] | None:
         return self.nodes.get(client_id)
 
+    def list_clients(self, limit: int | None = None) -> List[Dict[str, Any]]:
+        """All client profiles, id-sorted; ``limit`` caps the count."""
+        clients = sorted(
+            (n for n in self.nodes.values() if n.get("label") == "ClientProfile"),
+            key=lambda n: n.get("client_id", ""),
+        )
+        return clients[:limit] if limit else clients
+
     def get_related_documents(self, client_id: str) -> List[Dict[str, Any]]:
         related_ids = [
             rel["to"]

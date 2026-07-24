@@ -840,7 +840,9 @@ def _store_counts() -> Dict[str, int]:
             counts[label] = counts.get(label, 0) + 1
         return counts
     try:
-        return store.graph_summary()
+        # Neo4j's graph_summary() nests as {nodes:{...}, relationships:{...}};
+        # the dashboard wants a flat label->count map like the in-memory store.
+        return store.graph_summary().get("nodes", {})
     except Exception:
         return {}
 
@@ -848,11 +850,11 @@ def _store_counts() -> Dict[str, int]:
 @app.get("/api/dashboard/summary")
 def dashboard_summary(current_user: dict = Depends(require_dashboard_read)) -> Dict[str, Any]:
     counts = _store_counts()
-    nodes = getattr(store, "nodes", {}) or {}
-    clients = sorted(
-        [node for node in nodes.values() if node.get("label") == "ClientProfile"],
-        key=lambda node: node.get("client_id", ""),
-    )
+    # Read-only preview scan: run the compliance workflow over a bounded sample
+    # of clients (store-agnostic — works on both in-memory and Neo4j). Scanning
+    # every client on each dashboard load would be needlessly slow.
+    DASH_SCAN_LIMIT = 25
+    clients = store.list_clients(limit=DASH_SCAN_LIMIT)
 
     decisions = []
     for client in clients:

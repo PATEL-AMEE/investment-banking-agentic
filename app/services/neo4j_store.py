@@ -198,6 +198,16 @@ class Neo4jStore:
                 return None
             return dict(rec['c'])
 
+    def list_clients(self, limit: Optional[int] = None) -> List[Dict[str, Any]]:
+        """All client profiles, id-sorted; ``limit`` caps the count."""
+        cypher = "MATCH (c:ClientProfile) RETURN c ORDER BY c.client_id"
+        params: Dict[str, Any] = {}
+        if limit:
+            cypher += " LIMIT $limit"
+            params["limit"] = limit
+        with self.driver.session() as s:
+            return [dict(rec["c"]) for rec in s.run(cypher, **params)]
+
     def get_related_documents(self, client_id: str) -> List[Dict[str, Any]]:
         with self.driver.session() as s:
             res = s.run(
