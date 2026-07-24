@@ -61,7 +61,12 @@ NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD", "")
 if NEO4J_URI:
     store = Neo4jStore(NEO4J_URI, NEO4J_USER, NEO4J_PASSWORD)
     try:
-        store.load_demo_data(data_dir=BASE_DIR.parent / "data")
+        # Seed only an empty graph. Re-seeding a populated Neo4j on every pod
+        # start re-pushes the whole dataset over the network, which can exceed
+        # container health-probe windows and crash-loop the pod. Re-seed
+        # deliberately with scripts/seed_neo4j.py instead.
+        if not store.list_clients(limit=1):
+            store.load_demo_data(data_dir=BASE_DIR.parent / "data")
     except Exception:
         # best-effort seed
         pass
