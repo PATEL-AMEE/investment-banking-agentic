@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 import math
+import os
 import re
 from collections import Counter
 from datetime import datetime, timezone
@@ -91,6 +92,62 @@ def context_recall(retrieved_ids: List[str], expected_ids: List[str]) -> float:
     return round(sum(1 for e in expected_ids if e in retrieved) / len(expected_ids), 4)
 
 
+# ----------------------------------------------------------- LLM-judge engine
+def eval_engine() -> str:
+    """Which scoring engine to use for faithfulness/relevancy.
+
+    - ``lexical`` (default): the deterministic token-overlap proxies above —
+      free, offline, CI-safe.
+    - ``llm``/``ragas``: LLM-as-judge (RAGAS-style entailment) using the
+      configured Azure OpenAI via ``LLMAdapter``. Set ``EVAL_ENGINE=llm`` to
+      enable; it makes one judge call per case and falls back to lexical on any
+      error, so it's safe to leave wired. (The ``ragas`` package can be slotted
+      in here later; the LLM judge is the same idea without the extra dependency.)
+    """
+    return os.getenv("EVAL_ENGINE", "lexical").strip().lower()
+
+
+def _llm_judge(question: str, answer: str, contexts: List[str]) -> tuple[float, float]:
+    """(faithfulness, answer_relevancy) scored 0-1 by an LLM judge, grounded
+    strictly in the retrieved contexts. Raises on any failure so the caller can
+    fall back to the deterministic proxies."""
+    from app.services.llm_adapter import LLMAdapter
+
+    context_block = "\n\n".join(f"[{i + 1}] {c}" for i, c in enumerate(contexts)) or "(no context retrieved)"
+    system = "You are a strict RAG evaluation judge. Judge only against the provided context. Reply with JSON only."
+    user = (
+        f"Question:\n{question}\n\n"
+        f"Retrieved context:\n{context_block}\n\n"
+        f"Answer:\n{answer}\n\n"
+        "Score two metrics from 0.0 to 1.0:\n"
+        "- faithfulness: fraction of the answer's claims supported by the retrieved context "
+        "(1.0 = fully grounded, 0.0 = unsupported / hallucinated).\n"
+        "- answer_relevancy: how directly the answer addresses the question.\n"
+        'Respond as JSON only: {"faithfulness": <float>, "answer_relevancy": <float>}'
+    )
+    raw = LLMAdapter().chat(
+        [{"role": "system", "content": system}, {"role": "user", "content": user}],
+        temperature=0.0,
+        max_tokens=120,
+    )
+    match = re.search(r"\{.*\}", raw, re.S)
+    data = json.loads(match.group(0)) if match else {}
+    faith = max(0.0, min(1.0, float(data["faithfulness"])))
+    relevancy = max(0.0, min(1.0, float(data["answer_relevancy"])))
+    return round(faith, 4), round(relevancy, 4)
+
+
+def _score_answer(question: str, answer: str, contexts: List[str]) -> tuple[float, float]:
+    """faithfulness, answer_relevancy under the active engine (LLM judge with a
+    deterministic-proxy fallback)."""
+    if eval_engine() in ("llm", "ragas"):
+        try:
+            return _llm_judge(question, answer, contexts)
+        except Exception:  # provider down / unparseable — never fail the eval
+            pass
+    return faithfulness(answer, contexts), answer_relevancy(question, answer)
+
+
 # ------------------------------------------------------------------- runner
 def evaluate_case(case: Dict[str, Any], store: Any) -> Dict[str, Any]:
     """Run one golden Q&A case through the copilot chain and score it."""
@@ -102,7 +159,7 @@ def evaluate_case(case: Dict[str, Any], store: Any) -> Dict[str, Any]:
     retrieved_ids = [c.get("source_id", "") for c in citations]
     contexts = [c.get("excerpt", "") for c in citations]
 
-    faith = faithfulness(answer, contexts)
+    faith, relevancy = _score_answer(case["question"], answer, contexts)
     return {
         "case_id": case.get("case_id"),
         "question": case["question"],
@@ -111,7 +168,7 @@ def evaluate_case(case: Dict[str, Any], store: Any) -> Dict[str, Any]:
         "metrics": {
             "faithfulness": faith,
             "hallucination_rate": round(1 - faith, 4),
-            "answer_relevancy": answer_relevancy(case["question"], answer),
+            "answer_relevancy": relevancy,
             "context_precision": context_precision(retrieved_ids, case.get("expected_sources", [])),
             "context_recall": context_recall(retrieved_ids, case.get("expected_sources", [])),
         },
@@ -131,6 +188,7 @@ def run_evaluation(dataset: List[Dict[str, Any]], store: Any) -> Dict[str, Any]:
     }
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
+        "engine": eval_engine(),
         "case_count": len(cases),
         "aggregate": aggregate,
         "cases": cases,

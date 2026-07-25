@@ -203,6 +203,49 @@ def test_eval_endpoint_runs_golden_dataset():
     body = response.json()
     assert body["case_count"] >= 6
     assert "faithfulness" in body["aggregate"]
+    # The report now A/Bs the two retrieval chains.
+    assert "ablation" in body and "graph_rag" in body["ablation"]["aggregate"]
+
+
+def test_eval_engine_defaults_to_lexical(monkeypatch):
+    from app.eval import harness
+
+    monkeypatch.delenv("EVAL_ENGINE", raising=False)
+    assert harness.eval_engine() == "lexical"
+    monkeypatch.setenv("EVAL_ENGINE", "llm")
+    assert harness.eval_engine() == "llm"
+
+
+def test_llm_judge_parses_scores(monkeypatch):
+    """The LLM judge returns bounded faithfulness/relevancy from a JSON reply."""
+    from app.eval import harness
+
+    monkeypatch.setattr(
+        harness.LLMAdapter if hasattr(harness, "LLMAdapter") else LLMAdapter,
+        "chat",
+        lambda self, messages, **kw: 'Here: {"faithfulness": 0.8, "answer_relevancy": 0.9}',
+    )
+    faith, relevancy = harness._llm_judge("q", "a", ["ctx"])
+    assert faith == 0.8 and relevancy == 0.9
+
+
+def test_score_answer_falls_back_to_lexical_on_judge_error(monkeypatch):
+    """A failing LLM judge never breaks the eval — it falls back to proxies."""
+    from app.eval import harness
+
+    monkeypatch.setenv("EVAL_ENGINE", "llm")
+    monkeypatch.setattr(LLMAdapter, "chat", lambda self, messages, **kw: "not json")
+    faith, relevancy = harness._score_answer("high-risk clients?", "high-risk clients require review", ["high-risk clients require review"])
+    assert 0.0 <= faith <= 1.0 and 0.0 <= relevancy <= 1.0
+
+
+def test_run_ablation_reports_both_chains():
+    from app.eval.harness import load_golden_dataset, run_ablation
+
+    report = run_ablation(load_golden_dataset(Path("data") / "eval" / "golden_qa.json"), store)
+    assert {"vector_rag", "graph_rag"} <= set(report["aggregate"])
+    # The graph hop never loses recall (it only adds graph-connected sources).
+    assert report["aggregate"]["graph_rag"]["context_recall"] >= report["aggregate"]["vector_rag"]["context_recall"]
 
 
 # ---------------------------------------------------------- RBAC on LLM APIs
