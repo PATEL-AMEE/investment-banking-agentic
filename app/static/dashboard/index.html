@@ -3,127 +3,159 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Agentic AI Platform — Live Dashboard</title>
+<title>Compliance Platform — Live Dashboard</title>
 <style>
-  :root {
-    color-scheme: light;
-    --plane:#f4f6f9; --surface:#fff; --surface-2:#fafbfc;
-    --ink:#0e1217; --ink-2:#51565e; --muted:#8a8f98;
-    --grid:#e6e9ee; --hair:rgba(14,18,23,.10);
-    --accent:#2a78d6; --accent-soft:#eaf2fc;
-    --good:#0ca30c; --warning:#d98a00; --critical:#d03b3b;
-    --good-bg:rgba(12,163,12,.12); --warn-bg:rgba(217,138,0,.14); --crit-bg:rgba(208,59,59,.12);
-    --radius:14px; --shadow:0 1px 2px rgba(14,18,23,.04),0 4px 16px rgba(14,18,23,.05);
-    --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  :root{
+    color-scheme:light;
+    --plane:#f4f6fb; --surface:#ffffff; --surface-2:#f7f9fc; --surface-3:#eef2f8;
+    --ink:#0b1526; --ink-2:#55617a; --muted:#8b95a8;
+    --grid:#e8ecf3; --hair:rgba(11,21,38,.09);
+    --brand-ink:#0b1b3a;
+    --accent:#1a5cff; --accent-2:#0b40cc; --accent-soft:#e9f0ff;
+    --good:#0a8a5f; --warning:#b7791f; --critical:#d64545;
+    --good-bg:rgba(10,138,95,.12); --warn-bg:rgba(183,121,31,.14); --crit-bg:rgba(214,69,69,.12);
+    --radius:16px; --radius-sm:10px;
+    --shadow:0 1px 2px rgba(11,21,38,.04),0 6px 22px rgba(11,21,38,.06);
+    --shadow-sm:0 1px 2px rgba(11,21,38,.05);
+    --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
     --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
   }
   @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
-    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
-    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
-    --accent:#3987e5; --accent-soft:#17273b;
-    --good-bg:rgba(12,163,12,.20); --warn-bg:rgba(217,138,0,.20); --crit-bg:rgba(208,59,59,.20);
+    color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
+    --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
+    --brand-ink:#eef2f9; --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
+    --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
   }}
   :root[data-theme="dark"]{
-    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
-    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
-    --accent:#3987e5; --accent-soft:#17273b;
-    --good-bg:rgba(12,163,12,.20); --warn-bg:rgba(217,138,0,.20); --crit-bg:rgba(208,59,59,.20);
+    color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
+    --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
+    --brand-ink:#eef2f9; --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
+    --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 60px}
-  .num{font-variant-numeric:tabular-nums}
-  a{color:var(--accent)}
+  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  a{color:var(--accent);text-decoration:none}
 
-  header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}
-  h1{font-size:clamp(21px,2.8vw,28px);font-weight:680;letter-spacing:-.02em;margin:0}
-  .sub{margin:4px 0 0;color:var(--ink-2);font-size:13.5px}
-  .tags{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .badge{font-size:11.5px;font-weight:600;letter-spacing:.03em;text-transform:uppercase;padding:5px 10px;border-radius:999px;border:1px solid var(--hair);color:var(--ink-2);background:var(--surface)}
-  .badge.live{color:var(--good);background:var(--good-bg);border-color:transparent;display:inline-flex;align-items:center;gap:6px}
-  .badge.live .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+  /* ---- top bar ---- */
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:12px clamp(16px,4vw,40px);background:color-mix(in srgb,var(--surface) 88%,transparent);
+    backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--hair)}
+  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  .mark{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;
+    background:linear-gradient(140deg,var(--accent),var(--accent-2));box-shadow:0 4px 12px rgba(26,92,255,.35)}
+  .brand-name{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--brand-ink);line-height:1.15}
+  .brand-sub{font-size:11.5px;color:var(--muted);letter-spacing:.01em}
+  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  #authslot{display:flex;gap:8px;align-items:center}
   button{font:inherit;cursor:pointer}
-  .btn{font-size:13px;padding:8px 14px;border-radius:9px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2)}
-  .btn:hover{color:var(--ink)}
-  .btn.pri{background:var(--accent);color:#fff;border-color:transparent;font-weight:600}
+  .btn{font-size:13px;padding:8px 13px;border-radius:10px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2);
+    text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.15s;font-weight:500}
+  .btn:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--hair));box-shadow:var(--shadow-sm)}
+  .btn.pri{background:linear-gradient(140deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;box-shadow:0 4px 12px rgba(26,92,255,.28)}
+  .btn.pri:hover{filter:brightness(1.06);color:#fff}
+  .btn.icon{padding:8px 11px}
+  .badge{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:6px 11px;border-radius:999px;border:1px solid var(--hair);color:var(--ink-2);background:var(--surface)}
+  .badge.live{color:var(--good);background:var(--good-bg);border-color:transparent;display:inline-flex;align-items:center;gap:7px}
+  .badge.live .dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 0 0 currentColor;animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
 
-  .meta{margin:16px 0 24px;font-size:12.5px;color:var(--muted);font-family:var(--mono)}
-  .eyebrow{font-size:12px;font-weight:640;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:30px 0 13px}
+  .wrap{max-width:1240px;margin:0 auto;padding:24px clamp(16px,4vw,40px) 64px}
+  .meta{margin:2px 0 26px;font-size:12px;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:8px}
+  .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:32px 0 14px;display:flex;align-items:center;gap:10px}
+  .eyebrow::after{content:"";flex:1;height:1px;background:var(--hair)}
 
-  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:13px}
-  .tile{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:15px;box-shadow:var(--shadow)}
-  .tile .label{font-size:12px;color:var(--ink-2)}
-  .tile .value{font-size:clamp(19px,2.2vw,26px);font-weight:700;letter-spacing:-.02em;margin-top:7px}
-  .tile .foot{font-size:11px;color:var(--muted);margin-top:3px}
+  /* ---- KPI tiles ---- */
+  .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
+  .tile{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:16px 16px 15px;
+    box-shadow:var(--shadow);overflow:hidden;transition:.18s}
+  .tile::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 20%,transparent));opacity:.85}
+  .tile:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(11,21,38,.05),0 12px 30px rgba(11,21,38,.10)}
+  .tile .label{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);text-transform:uppercase}
+  .tile .value{font-size:clamp(22px,2.4vw,30px);font-weight:750;letter-spacing:-.03em;margin-top:9px;color:var(--ink)}
+  .tile .foot{font-size:11.5px;color:var(--muted);margin-top:4px}
 
-  .cols{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start}
-  .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow)}
-  .card h3{margin:0 0 2px;font-size:15px;font-weight:640}
-  .card .cap{margin:0 0 14px;font-size:12.5px;color:var(--muted)}
+  /* ---- layout ---- */
+  .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
+  .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+  .card h3{margin:0 0 3px;font-size:15.5px;font-weight:680;letter-spacing:-.01em}
+  .card .cap{margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.45}
   .stack{display:flex;flex-direction:column;gap:18px}
 
+  /* ---- decision bar + table ---- */
+  .barline{display:flex;height:20px;border-radius:8px;overflow:hidden;margin:2px 0 12px;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--hair)}
+  .barline i{height:100%;transition:width .5s ease}
+  .barline i+i{box-shadow:inset 1px 0 0 rgba(255,255,255,.35)}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);font-weight:500}
+  .legend span{display:inline-flex;align-items:center;gap:7px}
+  .sw{width:11px;height:11px;border-radius:3px}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--grid)}
-  th{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+  th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--grid)}
+  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:1px solid var(--hair);position:sticky;top:0}
+  tbody tr{transition:.12s}
   tbody tr:hover{background:var(--surface-2)}
+  tbody tr:last-child td{border-bottom:none}
   td.r,th.r{text-align:right}
-  .pill{font-size:11.5px;font-weight:620;padding:3px 9px;border-radius:6px;display:inline-block}
+  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-block;letter-spacing:.02em;text-transform:capitalize}
   .pill.good{color:var(--good);background:var(--good-bg)}
   .pill.warn{color:var(--warning);background:var(--warn-bg)}
   .pill.crit{color:var(--critical);background:var(--crit-bg)}
   .idc{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
 
-  .barline{display:flex;height:14px;border-radius:6px;overflow:hidden;margin:2px 0 10px;background:var(--surface-2)}
-  .barline i{height:100%}
-  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--ink-2)}
-  .legend span{display:inline-flex;align-items:center;gap:6px}
-  .sw{width:11px;height:11px;border-radius:3px}
-
-  .kv{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px solid var(--grid)}
-  .kv:last-child{border:none}
-  .kv b{font-weight:640}
-
-  form.try{display:flex;flex-direction:column;gap:10px}
-  .field{display:flex;flex-direction:column;gap:4px}
-  .field label{font-size:12px;color:var(--ink-2)}
-  input[type=text],select{font:inherit;font-size:13px;padding:8px 10px;border-radius:8px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
-  .row{display:flex;gap:10px;align-items:center}
-  .check{display:flex;gap:7px;align-items:center;font-size:13px;color:var(--ink-2)}
-  .result{font-size:12.5px;background:var(--surface-2);border:1px solid var(--hair);border-radius:9px;padding:11px;display:none}
-  .result.show{display:block}
-  .result .line{display:flex;justify-content:space-between;padding:2px 0}
-  .cite{border-left:2px solid var(--accent);padding:2px 0 2px 9px;margin-top:7px;font-size:12px}
-  .cite small{color:var(--muted)}
-  .ev{font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--grid)}
+  /* ---- review queue + audit ---- */
+  .kv{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;padding:9px 0;border-bottom:1px solid var(--grid)}
+  .kv:last-of-type{border:none}
+  .kv b{font-weight:720;font-size:16px}
+  .ev{font-size:12.5px;padding:10px 0;border-bottom:1px solid var(--grid)}
   .ev:last-child{border:none}
-  .ev .t{font-weight:620}
+  .ev .t{font-weight:640}
   .ev .d{color:var(--ink-2)}
-  .ev .ts{font-family:var(--mono);font-size:11px;color:var(--muted)}
-  .empty{font-size:12.5px;color:var(--muted);font-style:italic}
+  .ev .ts{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
+  .empty{font-size:12.5px;color:var(--muted);font-style:italic;padding:6px 0}
 
-  footer{margin-top:38px;padding-top:16px;border-top:1px solid var(--grid);font-size:12px;color:var(--muted)}
-  @media (max-width:940px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
-  @media (max-width:520px){.kpis{grid-template-columns:repeat(2,1fr)}}
+  /* ---- KYC form ---- */
+  form.try{display:flex;flex-direction:column;gap:12px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:11.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.02em}
+  input[type=text],select{font:inherit;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--hair);background:var(--surface-2);color:var(--ink);transition:.15s}
+  input[type=text]:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .row{display:flex;gap:12px;align-items:center}
+  .check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-2)}
+  .result{font-size:12.5px;background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--radius-sm);padding:14px;display:none;margin-top:4px}
+  .result.show{display:block}
+  .result .line{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--grid)}
+  .result .line:last-child{border:none}
+
+  footer{margin-top:42px;padding-top:18px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted)}
+  @media (max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
+  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.brand-sub{display:none}}
 </style>
 <script src="/static/auth.js"></script>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
+<header class="topbar">
+  <div class="brand">
+    <span class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h3.5l2 5 4-13 2.5 8H21"/></svg>
+    </span>
     <div>
-      <h1>Agentic AI Platform — Live Dashboard</h1>
-      <p class="sub">Real output from your running app · Investment Banking compliance workflows</p>
+      <div class="brand-name">Compliance Platform</div>
+      <div class="brand-sub">Agentic AI · Investment Banking</div>
     </div>
-    <div class="tags">
-      <span class="badge live"><span class="dot"></span>Live data</span>
-      <span class="tags" id="authslot"></span>
-      <a class="btn" href="/reviewer" style="text-decoration:none">✅ Reviews</a>
-      <a class="btn" href="/chat" style="text-decoration:none">💬 Chat</a>
-      <button class="btn" id="refresh" type="button">↻ Refresh</button>
-      <button class="btn" id="theme" type="button">◐ Theme</button>
-    </div>
-  </header>
+  </div>
+  <div class="actions">
+    <span class="badge live"><span class="dot"></span>Live</span>
+    <span id="authslot"></span>
+    <a class="btn" href="/reviewer">Reviews</a>
+    <a class="btn" href="/chat">Chat</a>
+    <button class="btn icon" id="refresh" type="button" title="Refresh">↻</button>
+    <button class="btn icon" id="theme" type="button" title="Toggle theme">◐</button>
+  </div>
+</header>
+
+<div class="wrap">
   <div class="meta" id="meta">Loading live data…</div>
 
   <div class="eyebrow">Platform state</div>
@@ -135,7 +167,7 @@
       <h3>Client risk decisions</h3>
       <p class="cap">A sample of clients run through the real compliance workflow (read-only scan)</p>
       <div class="barline" id="decBar"></div>
-      <div class="legend" style="margin-bottom:12px">
+      <div class="legend" style="margin-bottom:14px">
         <span><i class="sw" style="background:var(--good)"></i>pass</span>
         <span><i class="sw" style="background:var(--warning)"></i>warn</span>
         <span><i class="sw" style="background:var(--critical)"></i>fail</span>
@@ -154,7 +186,7 @@
         <p class="cap">Human-in-the-loop tasks created by real inspect calls</p>
         <div class="kv"><span>Pending</span><b id="revPending" class="num">–</b></div>
         <div class="kv"><span>Resolved</span><b id="revResolved" class="num">–</b></div>
-        <a class="btn" href="/reviewer" style="margin-top:12px;display:inline-block;text-decoration:none">Open review queue →</a>
+        <a class="btn" href="/reviewer" style="margin-top:14px;justify-content:center">Open review queue →</a>
       </div>
 
       <div class="card">
@@ -172,7 +204,7 @@
     <form class="try" id="kycForm">
       <div class="row">
         <div class="field" style="flex:1"><label>Client name</label><input type="text" id="kycName" value="Globex Ltd"></div>
-        <div class="field" style="width:110px"><label>Jurisdiction</label>
+        <div class="field" style="width:130px"><label>Jurisdiction</label>
           <select id="kycJur"><option>US</option><option>GB</option><option>IR</option><option>SY</option><option>KP</option></select>
         </div>
       </div>
@@ -182,7 +214,7 @@
     <div class="result" id="kycResult"></div>
   </div>
 
-  <footer id="footer">Live view served by your FastAPI app. Numbers come from the demo CSVs in <span class="idc">data/</span> — small by design.</footer>
+  <footer id="footer">Live view served by your FastAPI app · data from the demo corpus in <span class="idc">data/</span>.</footer>
 </div>
 
 <script>
