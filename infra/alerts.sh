@@ -185,12 +185,18 @@ create_log_alert "agentic-graph-store-down" 0 "PT5M" "PT5M" \
 #    hallucination_rate is 1 - faithfulness. A falling mean means answers are
 #    drifting from their sources even while retrieval still returns citations —
 #    a subtler failure than the ungrounded-answers rule above.
+#
+#    Threshold note: this is the *lexical* proxy (token overlap), which runs
+#    deliberately harsh on the real model's verbose answers — the healthy
+#    production mean sits around 0.3, so the alert catches a *collapse* toward
+#    zero (retrieval broke, contexts empty/wrong), not normal paraphrase. For an
+#    absolute, entailment-based read run the eval harness with EVAL_ENGINE=llm.
 create_log_alert "agentic-hallucination-rate" 1 "PT30M" "PT30M" \
-  "Mean copilot faithfulness dropped below 0.5 (hallucination rate over 50%)." \
+  "Mean copilot faithfulness collapsed below 0.15 - answers no longer track their sources." \
   'customMetrics
 | where name == "copilot.faithfulness"
 | summarize mean_faithfulness = sum(valueSum) / sum(valueCount), answers = sum(valueCount)
-| where answers > 5 and mean_faithfulness < 0.5'
+| where answers > 5 and mean_faithfulness < 0.15'
 
 echo
 echo "Done. Alert rules provisioned in $RESOURCE_GROUP, notifying $ALERT_EMAIL."
