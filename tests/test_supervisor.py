@@ -125,8 +125,9 @@ def test_ask_endpoint_403_when_all_intents_denied():
 def test_chat_ui_is_served():
     response = client.get("/chat")
     assert response.status_code == 200
-    assert "Copilot Chat" in response.text
+    assert "Copilot" in response.text
     assert "/api/agents/ask" in response.text
+    assert 'id="composer"' in response.text
 
 
 def test_staff_flow_page_is_served():
