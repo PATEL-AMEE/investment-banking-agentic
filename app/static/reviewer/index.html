@@ -15,11 +15,24 @@
   .viewonly{padding:10px 13px;background:var(--warn-bg);border:1px solid color-mix(in srgb,var(--warning) 40%,transparent);
     border-radius:var(--radius-sm);color:var(--warning);font-size:13px;margin-bottom:14px;font-weight:500}
   .error{color:var(--critical);font-size:13px}
-  #resolver h3{margin:0 0 4px;font-size:15px}
-  #resolver label{display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;color:var(--ink-2);margin:12px 0 5px}
-  #resolver select,#resolver input,#resolver textarea{width:100%}
-  #resolver textarea{min-height:80px;resize:vertical}
-  #resolver #submitResolve{margin-top:14px}
+  #resolver label{display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;color:var(--ink-2);margin:16px 0 5px}
+  #resolver textarea{width:100%;min-height:70px;resize:vertical}
+  .rv-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .rv-head .idc{font-size:14.5px;font-weight:700}
+  .rv-reason{font-size:14px;color:var(--ink);margin:0 0 14px;font-weight:500}
+  .rv-detail{margin:0}
+  .rv-row{display:grid;grid-template-columns:150px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid var(--grid);font-size:13px}
+  .rv-row dt{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.02em;font-weight:700}
+  .rv-row dd{margin:0;color:var(--ink)}
+  .rv-ev{margin-top:14px;background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--radius-sm);padding:12px}
+  .rv-ev-cap{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:4px}
+  .rv-ev-item{font-size:12.5px;color:var(--ink-2);border-left:2px solid var(--accent);padding:2px 0 2px 9px;margin-top:6px}
+  .rv-actions{display:flex;gap:10px;margin-top:18px}
+  .rv-actions .btn{flex:1;justify-content:center;font-weight:600;font-size:13.5px;padding:12px;color:#fff;border:none}
+  .rv-actions .btn:hover{filter:brightness(1.08);color:#fff;box-shadow:var(--shadow)}
+  .btn.approve{background:var(--good)}
+  .btn.reject{background:var(--critical)}
+  .rv-done{font-size:13.5px;color:var(--good);font-weight:500;padding:8px 0}
   @media (max-width:900px){.rev-cols{grid-template-columns:1fr}}
 </style>
 <script src="/static/auth.js"></script>

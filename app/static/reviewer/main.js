@@ -47,41 +47,61 @@ async function loadPending() {
   }
 }
 
-function showResolver(review) {
-  resolverEl.innerHTML = '';
-  const html = document.createElement('div');
-  html.innerHTML = `
-    <h3>Resolve ${review.review_id}</h3>
-    <p>${review.reason}</p>
-    <label>Decision</label>
-    <select id="decisionSel"><option value="approve">approve</option><option value="reject">reject</option></select>
-    <label>Reviewer name</label>
-    <input id="reviewerName" placeholder="your name" value="${(window.ibAuth && window.ibAuth.user) || ''}" />
-    <label>Notes</label>
-    <textarea id="notes"></textarea>
-    <button id="submitResolve" class="btn pri">Submit</button>
-  `;
-  resolverEl.appendChild(html);
-  document.getElementById('submitResolve').addEventListener('click', () => submitResolve(review.review_id));
+const esc = s => String(s == null ? '' : s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+const sevClass = s => s === 'high' ? 'crit' : s === 'medium' ? 'warn' : 'muted';
+
+function detailRow(label, value) {
+  return value ? `<div class="rv-row"><dt>${label}</dt><dd>${esc(value)}</dd></div>` : '';
 }
 
-async function submitResolve(reviewId) {
-  const decision = document.getElementById('decisionSel').value;
-  const reviewer = document.getElementById('reviewerName').value
-    || (window.ibAuth && window.ibAuth.user) || 'unknown';
-  const notes = document.getElementById('notes').value || '';
+function showResolver(review) {
+  const d = review.details || {};
+  const evidence = Array.isArray(d.evidence) ? d.evidence : [];
+  resolverEl.innerHTML = `
+    <div class="rv-head">
+      <b class="idc">${esc(review.review_id)}</b>
+      <span class="pill ${sevClass(review.severity)}">${esc(review.severity || '—')}</span>
+    </div>
+    <p class="rv-reason">${esc(review.reason || '')}</p>
+    <dl class="rv-detail">
+      ${detailRow('Client', review.client_id)}
+      ${detailRow('Risk level', d.risk_level)}
+      ${detailRow('Assessment', d.decision_summary)}
+      ${detailRow('Agent recommendation', d.agent_recommendation)}
+      ${Array.isArray(d.policy_references) && d.policy_references.length ? detailRow('Policies', d.policy_references.join(', ')) : ''}
+    </dl>
+    ${evidence.length ? `<div class="rv-ev"><div class="rv-ev-cap">Evidence</div>${evidence.map(e => `<div class="rv-ev-item">${esc(e)}</div>`).join('')}</div>` : ''}
+    <label for="notes">Notes (optional)</label>
+    <textarea id="notes" placeholder="Add a note for the audit trail…"></textarea>
+    <div class="rv-actions">
+      <button class="btn approve" id="doApprove" type="button">✓ Approve</button>
+      <button class="btn reject" id="doReject" type="button">✕ Reject</button>
+    </div>
+  `;
+  document.getElementById('doApprove').addEventListener('click', () => submitResolve(review.review_id, 'approve'));
+  document.getElementById('doReject').addEventListener('click', () => submitResolve(review.review_id, 'reject'));
+}
+
+async function submitResolve(reviewId, decision) {
+  const reviewer = (window.ibAuth && window.ibAuth.user) || 'reviewer';
+  const notesEl = document.getElementById('notes');
+  const notes = (notesEl && notesEl.value) || '';
+  const buttons = resolverEl.querySelectorAll('.rv-actions button');
+  buttons.forEach(b => (b.disabled = true));
   try {
     const res = await fetch(`/api/reviews/${reviewId}/resolve`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ decision, reviewer, notes }),
     });
-    if (!res.ok) throw new Error('Failed to resolve');
-    alert('Resolved');
+    if (!res.ok) {
+      throw new Error(res.status === 403 ? 'You do not have permission to resolve reviews.' : 'Could not resolve (HTTP ' + res.status + ')');
+    }
+    resolverEl.innerHTML = `<p class="rv-done">✓ ${decision === 'approve' ? 'Approved' : 'Rejected'} ${esc(reviewId)}. Select another review from the list.</p>`;
     loadPending();
-    resolverEl.innerHTML = '<p>Select another review</p>';
   } catch (err) {
     alert(err.message);
+    buttons.forEach(b => (b.disabled = false));
   }
 }
 
