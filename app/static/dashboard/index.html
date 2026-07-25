@@ -3,17 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Compliance Platform — Live Dashboard</title>
+<title>Compliance Platform — Dashboard</title>
 <style>
   :root{
     color-scheme:light;
-    --plane:#f4f6fb; --surface:#ffffff; --surface-2:#f7f9fc; --surface-3:#eef2f8;
+    --plane:#eef1f7; --surface:#ffffff; --surface-2:#f7f9fc; --surface-3:#eef2f8;
     --ink:#0b1526; --ink-2:#55617a; --muted:#8b95a8;
     --grid:#e8ecf3; --hair:rgba(11,21,38,.09);
-    --brand-ink:#0b1b3a;
     --accent:#1a5cff; --accent-2:#0b40cc; --accent-soft:#e9f0ff;
     --good:#0a8a5f; --warning:#b7791f; --critical:#d64545;
     --good-bg:rgba(10,138,95,.12); --warn-bg:rgba(183,121,31,.14); --crit-bg:rgba(214,69,69,.12);
+    /* sidebar is a fixed deep-navy panel in both themes (premium SaaS pattern) */
+    --side-bg:#0b1b3a; --side-bg-2:#0e2148; --side-ink:#eaf0fd; --side-ink-2:#93a4c8;
+    --side-hair:rgba(255,255,255,.09); --side-active:rgba(255,255,255,.10);
     --radius:16px; --radius-sm:10px;
     --shadow:0 1px 2px rgba(11,21,38,.04),0 6px 22px rgba(11,21,38,.06);
     --shadow-sm:0 1px 2px rgba(11,21,38,.05);
@@ -23,31 +25,50 @@
   @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
     color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
     --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
-    --brand-ink:#eef2f9; --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
+    --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
     --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+    --side-bg:#0a1120; --side-bg-2:#0e1830; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
   }}
   :root[data-theme="dark"]{
     color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
     --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
-    --brand-ink:#eef2f9; --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
+    --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
     --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
-    --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+    --side-bg:#0a1120; --side-bg-2:#0e1830; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
   .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
   a{color:var(--accent);text-decoration:none}
+  svg{display:block}
 
-  /* ---- top bar ---- */
-  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:14px;
-    padding:12px clamp(16px,4vw,40px);background:color-mix(in srgb,var(--surface) 88%,transparent);
-    backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--hair)}
-  .brand{display:flex;align-items:center;gap:12px;min-width:0}
+  /* ---------- app shell ---------- */
+  .app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+
+  /* ---------- sidebar ---------- */
+  .sidebar{position:sticky;top:0;height:100vh;background:linear-gradient(180deg,var(--side-bg),var(--side-bg-2));
+    border-right:1px solid var(--side-hair);display:flex;flex-direction:column;padding:18px 14px;gap:6px;overflow-y:auto}
+  .brand{display:flex;align-items:center;gap:12px;padding:6px 8px 16px;margin-bottom:6px;border-bottom:1px solid var(--side-hair)}
   .mark{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;
-    background:linear-gradient(140deg,var(--accent),var(--accent-2));box-shadow:0 4px 12px rgba(26,92,255,.35)}
-  .brand-name{font-size:15px;font-weight:700;letter-spacing:-.01em;color:var(--brand-ink);line-height:1.15}
-  .brand-sub{font-size:11.5px;color:var(--muted);letter-spacing:.01em}
+    background:linear-gradient(140deg,#2f6bff,#0b40cc);box-shadow:0 4px 14px rgba(26,92,255,.4)}
+  .brand-name{font-size:14.5px;font-weight:700;letter-spacing:-.01em;color:var(--side-ink);line-height:1.15}
+  .brand-sub{font-size:11px;color:var(--side-ink-2);letter-spacing:.02em}
+  .nav-label{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--side-ink-2);opacity:.7;padding:14px 10px 6px}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--side-ink-2);font-size:13.5px;font-weight:500;transition:.14s;position:relative}
+  .nav-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
+  .nav-item:hover{background:var(--side-hair);color:var(--side-ink)}
+  .nav-item.active{background:var(--side-active);color:#fff;font-weight:600}
+  .nav-item.active::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#3f79ff,#0b40cc)}
+  .side-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--side-hair);font-size:11.5px;color:var(--side-ink-2)}
+  .side-foot .badge.live{color:#5fe0a8;background:rgba(95,224,168,.12)}
+
+  /* ---------- top bar ---------- */
+  .main{min-width:0;display:flex;flex-direction:column}
+  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:14px clamp(18px,3vw,34px);background:color-mix(in srgb,var(--surface) 86%,transparent);
+    backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--hair)}
+  h1{font-size:19px;font-weight:720;letter-spacing:-.02em;margin:0}
+  .sub{margin:2px 0 0;color:var(--muted);font-size:12.5px}
   .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
   #authslot{display:flex;gap:8px;align-items:center}
   button{font:inherit;cursor:pointer}
@@ -59,32 +80,30 @@
   .btn.icon{padding:8px 11px}
   .badge{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:6px 11px;border-radius:999px;border:1px solid var(--hair);color:var(--ink-2);background:var(--surface)}
   .badge.live{color:var(--good);background:var(--good-bg);border-color:transparent;display:inline-flex;align-items:center;gap:7px}
-  .badge.live .dot{width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 0 0 currentColor;animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--good) 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+  .badge.live .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
 
-  .wrap{max-width:1240px;margin:0 auto;padding:24px clamp(16px,4vw,40px) 64px}
-  .meta{margin:2px 0 26px;font-size:12px;color:var(--muted);font-family:var(--mono);display:flex;align-items:center;gap:8px}
-  .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:32px 0 14px;display:flex;align-items:center;gap:10px}
+  /* ---------- content ---------- */
+  .content{padding:22px clamp(18px,3vw,34px) 60px;max-width:1300px}
+  .meta{margin:0 0 22px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:30px 0 14px;display:flex;align-items:center;gap:10px}
   .eyebrow::after{content:"";flex:1;height:1px;background:var(--hair)}
+  .eyebrow:first-of-type{margin-top:4px}
 
-  /* ---- KPI tiles ---- */
   .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
-  .tile{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:16px 16px 15px;
-    box-shadow:var(--shadow);overflow:hidden;transition:.18s}
+  .tile{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:16px 16px 15px;box-shadow:var(--shadow);overflow:hidden;transition:.18s}
   .tile::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 20%,transparent));opacity:.85}
   .tile:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(11,21,38,.05),0 12px 30px rgba(11,21,38,.10)}
   .tile .label{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);text-transform:uppercase}
   .tile .value{font-size:clamp(22px,2.4vw,30px);font-weight:750;letter-spacing:-.03em;margin-top:9px;color:var(--ink)}
   .tile .foot{font-size:11.5px;color:var(--muted);margin-top:4px}
 
-  /* ---- layout ---- */
   .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
   .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
   .card h3{margin:0 0 3px;font-size:15.5px;font-weight:680;letter-spacing:-.01em}
   .card .cap{margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.45}
   .stack{display:flex;flex-direction:column;gap:18px}
 
-  /* ---- decision bar + table ---- */
   .barline{display:flex;height:20px;border-radius:8px;overflow:hidden;margin:2px 0 12px;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--hair)}
   .barline i{height:100%;transition:width .5s ease}
   .barline i+i{box-shadow:inset 1px 0 0 rgba(255,255,255,.35)}
@@ -93,7 +112,7 @@
   .sw{width:11px;height:11px;border-radius:3px}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--grid)}
-  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:1px solid var(--hair);position:sticky;top:0}
+  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:1px solid var(--hair)}
   tbody tr{transition:.12s}
   tbody tr:hover{background:var(--surface-2)}
   tbody tr:last-child td{border-bottom:none}
@@ -104,7 +123,6 @@
   .pill.crit{color:var(--critical);background:var(--crit-bg)}
   .idc{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
 
-  /* ---- review queue + audit ---- */
   .kv{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;padding:9px 0;border-bottom:1px solid var(--grid)}
   .kv:last-of-type{border:none}
   .kv b{font-weight:720;font-size:16px}
@@ -115,7 +133,6 @@
   .ev .ts{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
   .empty{font-size:12.5px;color:var(--muted);font-style:italic;padding:6px 0}
 
-  /* ---- KYC form ---- */
   form.try{display:flex;flex-direction:column;gap:12px}
   .field{display:flex;flex-direction:column;gap:5px}
   .field label{font-size:11.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.02em}
@@ -129,92 +146,124 @@
   .result .line:last-child{border:none}
 
   footer{margin-top:42px;padding-top:18px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted)}
-  @media (max-width:980px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
-  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}.brand-sub{display:none}}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1080px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
+  @media (max-width:860px){
+    .app{grid-template-columns:70px 1fr}
+    .brand-text,.brand-sub,.nav-label,.nav-item span,.side-foot{display:none}
+    .brand{justify-content:center;padding:6px 0 14px}
+    .nav-item{justify-content:center;padding:11px}
+    .nav-item.active::before{left:-14px}
+  }
+  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}h1{font-size:17px}}
 </style>
 <script src="/static/auth.js"></script>
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <span class="mark" aria-hidden="true">
-      <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h3.5l2 5 4-13 2.5 8H21"/></svg>
-    </span>
-    <div>
-      <div class="brand-name">Compliance Platform</div>
-      <div class="brand-sub">Agentic AI · Investment Banking</div>
-    </div>
-  </div>
-  <div class="actions">
-    <span class="badge live"><span class="dot"></span>Live</span>
-    <span id="authslot"></span>
-    <a class="btn" href="/reviewer">Reviews</a>
-    <a class="btn" href="/chat">Chat</a>
-    <button class="btn icon" id="refresh" type="button" title="Refresh">↻</button>
-    <button class="btn icon" id="theme" type="button" title="Toggle theme">◐</button>
-  </div>
-</header>
-
-<div class="wrap">
-  <div class="meta" id="meta">Loading live data…</div>
-
-  <div class="eyebrow">Platform state</div>
-  <div class="kpis" id="kpis"></div>
-
-  <div class="eyebrow">Compliance decisions</div>
-  <div class="cols">
-    <div class="card">
-      <h3>Client risk decisions</h3>
-      <p class="cap">A sample of clients run through the real compliance workflow (read-only scan)</p>
-      <div class="barline" id="decBar"></div>
-      <div class="legend" style="margin-bottom:14px">
-        <span><i class="sw" style="background:var(--good)"></i>pass</span>
-        <span><i class="sw" style="background:var(--warning)"></i>warn</span>
-        <span><i class="sw" style="background:var(--critical)"></i>fail</span>
-      </div>
-      <div style="overflow-x:auto">
-        <table>
-          <thead><tr><th>Client</th><th>Name</th><th>Country</th><th class="r">Risk</th><th class="r">Conf.</th><th>Decision</th><th>Review</th></tr></thead>
-          <tbody id="decRows"></tbody>
-        </table>
+<div class="app">
+  <!-- ===== sidebar ===== -->
+  <aside class="sidebar">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h3.5l2 5 4-13 2.5 8H21"/></svg></span>
+      <div class="brand-text">
+        <div class="brand-name">Compliance</div>
+        <div class="brand-sub">Agentic AI Platform</div>
       </div>
     </div>
 
-    <div class="stack">
-      <div class="card">
-        <h3>Review queue</h3>
-        <p class="cap">Human-in-the-loop tasks created by real inspect calls</p>
-        <div class="kv"><span>Pending</span><b id="revPending" class="num">–</b></div>
-        <div class="kv"><span>Resolved</span><b id="revResolved" class="num">–</b></div>
-        <a class="btn" href="/reviewer" style="margin-top:14px;justify-content:center">Open review queue →</a>
-      </div>
+    <div class="nav-label">Overview</div>
+    <a class="nav-item active" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
+    <a class="nav-item" href="/chat"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg><span>Copilot chat</span></a>
+    <a class="nav-item" href="/reviewer"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Review queue</span></a>
 
-      <div class="card">
-        <h3>Recent audit events</h3>
-        <p class="cap">Immutable trail from live API calls</p>
-        <div id="auditList"><div class="empty">No audit events yet — run a check below.</div></div>
-      </div>
-    </div>
-  </div>
+    <div class="nav-label">Observability</div>
+    <a class="nav-item" href="/telemetry"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>Tracing</span></a>
+    <a class="nav-item" href="/docs"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg><span>API docs</span></a>
 
-  <div class="eyebrow">Try the agents live</div>
-  <div class="card">
-    <h3>KYC / AML onboarding</h3>
-    <p class="cap">Posts to <span class="idc">/api/agents/onboarding/kyc</span> and shows the real result · clients apply through the <a href="/client/login">Client portal</a></p>
-    <form class="try" id="kycForm">
-      <div class="row">
-        <div class="field" style="flex:1"><label>Client name</label><input type="text" id="kycName" value="Globex Ltd"></div>
-        <div class="field" style="width:130px"><label>Jurisdiction</label>
-          <select id="kycJur"><option>US</option><option>GB</option><option>IR</option><option>SY</option><option>KP</option></select>
+    <div class="nav-label">External</div>
+    <a class="nav-item" href="/client/login"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg><span>Client portal</span></a>
+
+    <div class="side-foot"><span class="badge live"><span class="dot"></span>Systems live</span></div>
+  </aside>
+
+  <!-- ===== main ===== -->
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1>Dashboard</h1>
+        <p class="sub">Real output from your running app · compliance workflows</p>
+      </div>
+      <div class="actions">
+        <span class="badge live"><span class="dot"></span>Live</span>
+        <span id="authslot"></span>
+        <button class="btn icon" id="refresh" type="button" title="Refresh">↻</button>
+        <button class="btn icon" id="theme" type="button" title="Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="meta" id="meta">Loading live data…</div>
+
+      <div class="eyebrow">Platform state</div>
+      <div class="kpis" id="kpis"></div>
+
+      <div class="eyebrow">Compliance decisions</div>
+      <div class="cols">
+        <div class="card">
+          <h3>Client risk decisions</h3>
+          <p class="cap">A sample of clients run through the real compliance workflow (read-only scan)</p>
+          <div class="barline" id="decBar"></div>
+          <div class="legend" style="margin-bottom:14px">
+            <span><i class="sw" style="background:var(--good)"></i>pass</span>
+            <span><i class="sw" style="background:var(--warning)"></i>warn</span>
+            <span><i class="sw" style="background:var(--critical)"></i>fail</span>
+          </div>
+          <div style="overflow-x:auto">
+            <table>
+              <thead><tr><th>Client</th><th>Name</th><th>Country</th><th class="r">Risk</th><th class="r">Conf.</th><th>Decision</th><th>Review</th></tr></thead>
+              <tbody id="decRows"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="stack">
+          <div class="card">
+            <h3>Review queue</h3>
+            <p class="cap">Human-in-the-loop tasks created by real inspect calls</p>
+            <div class="kv"><span>Pending</span><b id="revPending" class="num">–</b></div>
+            <div class="kv"><span>Resolved</span><b id="revResolved" class="num">–</b></div>
+            <a class="btn" href="/reviewer" style="margin-top:14px;justify-content:center">Open review queue →</a>
+          </div>
+
+          <div class="card">
+            <h3>Recent audit events</h3>
+            <p class="cap">Immutable trail from live API calls</p>
+            <div id="auditList"><div class="empty">No audit events yet — run a check below.</div></div>
+          </div>
         </div>
       </div>
-      <label class="check"><input type="checkbox" id="kycPep" checked> Include a PEP beneficial owner (Jane Doe)</label>
-      <div class="row"><button class="btn pri" type="submit">Run KYC check</button></div>
-    </form>
-    <div class="result" id="kycResult"></div>
-  </div>
 
-  <footer id="footer">Live view served by your FastAPI app · data from the demo corpus in <span class="idc">data/</span>.</footer>
+      <div class="eyebrow">Try the agents live</div>
+      <div class="card">
+        <h3>KYC / AML onboarding</h3>
+        <p class="cap">Posts to <span class="idc">/api/agents/onboarding/kyc</span> and shows the real result · clients apply through the <a href="/client/login">Client portal</a></p>
+        <form class="try" id="kycForm">
+          <div class="row">
+            <div class="field" style="flex:1"><label>Client name</label><input type="text" id="kycName" value="Globex Ltd"></div>
+            <div class="field" style="width:130px"><label>Jurisdiction</label>
+              <select id="kycJur"><option>US</option><option>GB</option><option>IR</option><option>SY</option><option>KP</option></select>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" id="kycPep" checked> Include a PEP beneficial owner (Jane Doe)</label>
+          <div class="row"><button class="btn pri" type="submit">Run KYC check</button></div>
+        </form>
+        <div class="result" id="kycResult"></div>
+      </div>
+
+      <footer id="footer">Live view served by your FastAPI app · data from the demo corpus in <span class="idc">data/</span>.</footer>
+    </div>
+  </main>
 </div>
 
 <script>
