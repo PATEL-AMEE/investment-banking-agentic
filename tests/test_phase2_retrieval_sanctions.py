@@ -72,6 +72,41 @@ def test_retrieve_collapses_duplicate_policies_to_canonical(monkeypatch):
     assert "POL-DUP-09" not in ids and "POL-DUP-17" not in ids
 
 
+def test_graph_neighbors_returns_cited_regulation():
+    """A Policy's graph neighbour is the Regulation it CITES, with text."""
+    store = GraphStore(data_dir=Path("data"))
+    store.nodes = {
+        "POL-X-01": {"label": "Policy", "policy_id": "POL-X-01", "summary": "Enhanced due diligence for high-risk clients"},
+        "REG-X": {"label": "Regulation", "regulation_id": "REG-X", "title": "AML Directive 2023"},
+    }
+    store.relationships = [{"from": "POL-X-01", "to": "REG-X", "type": "CITES"}]
+    neighbours = store.graph_neighbors("POL-X-01")
+    assert any(n["id"] == "REG-X" and n["label"] == "Regulation" and n["text"] for n in neighbours)
+
+
+def test_graph_augmentation_recovers_graph_only_source(monkeypatch):
+    """GraphRAG recovers a cited regulation that vector search alone misses."""
+    from app.services import retrieval
+
+    monkeypatch.setattr(retrieval, "_new_vector_store", lambda: InMemoryVectorStore())
+    store = GraphStore(data_dir=Path("data"))
+    store.nodes = {
+        "POL-X-01": {"label": "Policy", "policy_id": "POL-X-01", "summary": "Enhanced due diligence for high-risk clients"},
+        "REG-X": {"label": "Regulation", "regulation_id": "REG-X", "title": "AML Directive 2023"},
+    }
+    store.relationships = [{"from": "POL-X-01", "to": "REG-X", "type": "CITES"}]
+    retriever = retrieval.GraphRAGRetriever(store)
+    retriever.build_index()
+
+    query = "high-risk enhanced due diligence"
+    vector_only = [c["source_id"] for c in retriever.retrieve(query, k=3, graph_augment=False)]
+    graph_rag = [c["source_id"] for c in retriever.retrieve(query, k=3, graph_augment=True)]
+    # REG-X's text ("AML Directive 2023") doesn't match the query lexically, so
+    # only the graph hop from POL-X-01 recovers it.
+    assert "REG-X" not in vector_only
+    assert "REG-X" in graph_rag
+
+
 # -------------------------------------------------------------------- chunking
 def test_chunk_text_overlaps_and_covers_all_content():
     text = " ".join(f"word{i}" for i in range(600))

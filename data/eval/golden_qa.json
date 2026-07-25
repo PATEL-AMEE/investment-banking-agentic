@@ -34,5 +34,19 @@
     "question": "What verification applies to beneficial ownership of corporate clients?",
     "expected_sources": ["POL-BEN-01"],
     "reference": "Beneficial ownership verification is required for corporate clients."
+  },
+  {
+    "case_id": "EVAL-007",
+    "question": "Which regulation governs enhanced due diligence for high-risk clients?",
+    "expected_sources": ["REG-001"],
+    "reference": "The AML Directive 2023 governs enhanced due diligence for high-risk clients.",
+    "graph_hop": "POL-AML-01 CITES REG-001"
+  },
+  {
+    "case_id": "EVAL-008",
+    "question": "Which regulation underlies mandatory counterparty sanctions screening?",
+    "expected_sources": ["REG-003"],
+    "reference": "The Sanctions Screening Regulation underlies mandatory counterparty screening.",
+    "graph_hop": "POL-SAN-01 CITES REG-003"
   }
 ]

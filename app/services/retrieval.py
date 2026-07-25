@@ -147,7 +147,44 @@ class GraphRAGRetriever:
                 related["governed_clients"] = clients[:5]
         return related
 
-    def retrieve(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
+    def _graph_augment(self, citations: List[Dict[str, Any]], limit: int) -> List[Dict[str, Any]]:
+        """Expand vector hits with their graph neighbours (the GraphRAG hop).
+
+        For each retrieved hit, pull content-bearing nodes one graph edge away
+        (a Policy's cited Regulation, an Evidence's Document) and add any not
+        already cited. This surfaces answer context that pure vector search over
+        the corpus would miss — the value a knowledge graph adds over plain RAG.
+        """
+        neighbors_fn = getattr(self.store, "graph_neighbors", None)
+        if neighbors_fn is None:
+            return []
+        already = {c["source_id"] for c in citations}
+        added: List[Dict[str, Any]] = []
+        for citation in citations:
+            if len(added) >= limit:
+                break
+            try:
+                neighbours = neighbors_fn(citation["source_id"])
+            except Exception:
+                continue
+            for nbr in neighbours:
+                if len(added) >= limit:
+                    break
+                if nbr["id"] in already:
+                    continue
+                already.add(nbr["id"])
+                added.append(
+                    {
+                        "source_id": nbr["id"],
+                        "excerpt": (nbr.get("text") or "")[:300],
+                        "score": None,  # graph-derived, not vector-scored
+                        "source_type": nbr.get("label", "Unknown"),
+                        "via": f"{citation['source_id']} {nbr.get('rel_type', 'RELATED')}",
+                    }
+                )
+        return added
+
+    def retrieve(self, query: str, k: int = 3, graph_augment: bool = True) -> List[Dict[str, Any]]:
         self._ensure_index()
         # Pull a wider pool than k: duplicate variants of the same policy would
         # otherwise fill the top-k and push the canonical rule out of range, so
@@ -188,6 +225,11 @@ class GraphRAGRetriever:
             if related:
                 citation["related"] = related
             citations.append(citation)
+        # GraphRAG hop: enrich the vector hits with their graph neighbours.
+        # This is what makes GraphRAG more than plain RAG — disable it
+        # (graph_augment=False) to A/B the two chains in the eval harness.
+        if graph_augment and citations:
+            citations.extend(self._graph_augment(citations, limit=k))
         return citations or list(_FALLBACK)
 
 

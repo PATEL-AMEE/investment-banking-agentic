@@ -629,7 +629,7 @@ def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
     Scores faithfulness, hallucination rate, answer relevancy, and context
     precision/recall across the copilot RAG chain on the live store.
     """
-    from app.eval.harness import load_golden_dataset, run_evaluation, run_feedback_regression
+    from app.eval.harness import load_golden_dataset, run_ablation, run_evaluation, run_feedback_regression
 
     try:
         dataset = load_golden_dataset(BASE_DIR.parent / "data" / "eval" / "golden_qa.json")
@@ -639,6 +639,9 @@ def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
     # Fold in the Phase 6.6 feedback loop: questions staff flagged as wrong are
     # re-scored here so a human-spotted failure keeps being measured until fixed.
     report["feedback_regression"] = run_feedback_regression(store)
+    # A/B the two retrieval chains (deterministic) so the report shows what the
+    # graph hop adds over plain vector RAG (recovers graph-connected sources).
+    report["ablation"] = run_ablation(dataset, store)
     audit_log.record(
         event_type="rag_evaluation",
         actor_id=str(current_user.get("sub", "local-user")),

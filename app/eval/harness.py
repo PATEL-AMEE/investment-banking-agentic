@@ -137,6 +137,57 @@ def run_evaluation(dataset: List[Dict[str, Any]], store: Any) -> Dict[str, Any]:
     }
 
 
+def run_ablation(dataset: List[Dict[str, Any]], store: Any) -> Dict[str, Any]:
+    """A/B the two retrieval chains: plain vector RAG vs graph-augmented GraphRAG.
+
+    Deterministic (no LLM): each golden question is retrieved twice — once with
+    the graph hop off (``graph_augment=False``), once on — and scored on context
+    precision/recall against the case's expected sources. The delta shows what
+    the knowledge graph actually buys: it recovers graph-connected sources
+    (e.g. the Regulation a Policy cites) that vector search alone misses,
+    typically lifting recall at some precision cost.
+    """
+    from app.services.retrieval import get_retriever
+    from app.services.telemetry import span
+
+    retriever = get_retriever(store)
+    retriever.build_index()
+    modes = {"vector_rag": False, "graph_rag": True}
+
+    cases: List[Dict[str, Any]] = []
+    with span("eval.ablation", cases=len(dataset)):
+        for case in dataset:
+            expected = case.get("expected_sources", [])
+            row: Dict[str, Any] = {"case_id": case.get("case_id"), "question": case["question"], "expected_sources": expected, "modes": {}}
+            for name, augment in modes.items():
+                ids = [c["source_id"] for c in retriever.retrieve(case["question"], k=3, graph_augment=augment)]
+                row["modes"][name] = {
+                    "retrieved": ids,
+                    "context_precision": context_precision(ids, expected),
+                    "context_recall": context_recall(ids, expected),
+                }
+            cases.append(row)
+
+    def _mean(mode: str, metric: str) -> float:
+        return round(sum(c["modes"][mode][metric] for c in cases) / len(cases), 4) if cases else 0.0
+
+    aggregate = {
+        name: {"context_precision": _mean(name, "context_precision"), "context_recall": _mean(name, "context_recall")}
+        for name in modes
+    }
+    delta = {
+        "context_precision": round(aggregate["graph_rag"]["context_precision"] - aggregate["vector_rag"]["context_precision"], 4),
+        "context_recall": round(aggregate["graph_rag"]["context_recall"] - aggregate["vector_rag"]["context_recall"], 4),
+    }
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "case_count": len(cases),
+        "aggregate": aggregate,
+        "graph_rag_delta": delta,
+        "cases": cases,
+    }
+
+
 def load_golden_dataset(path: str | Path | None = None) -> List[Dict[str, Any]]:
     dataset_path = Path(path) if path else Path("data") / "eval" / "golden_qa.json"
     return json.loads(dataset_path.read_text(encoding="utf-8"))

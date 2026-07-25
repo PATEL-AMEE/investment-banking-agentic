@@ -144,6 +144,45 @@ class GraphStore:
 
         return [copy.deepcopy(v) for v in getattr(self, "_kv", {}).get(collection, {}).values()]
 
+    # Content-bearing labels worth pulling in as extra retrieval context.
+    _AUGMENT_LABELS = ("Regulation", "Policy", "Evidence", "Document")
+
+    @staticmethod
+    def _node_text(node: Dict[str, Any]) -> str:
+        """Best available text for a node (title/summary/excerpt/name)."""
+        return " ".join(
+            filter(None, [node.get("title"), node.get("summary"), node.get("description"), node.get("excerpt"), node.get("name")])
+        )
+
+    def graph_neighbors(self, source_id: str) -> List[Dict[str, Any]]:
+        """Content-bearing nodes one graph hop from ``source_id`` (either
+        direction), with text — the basis for GraphRAG context expansion.
+
+        E.g. a Policy hit yields the Regulation it ``CITES``; an Evidence hit
+        yields the Document it ``SUPPORTS``. Client/Entity neighbours are
+        skipped (not answer-bearing text). Used by the retriever to add graph
+        context that pure vector search over the corpus would miss.
+        """
+        neighbours: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+        for rel in self.relationships:
+            if rel.get("from") == source_id:
+                nbr_id, rel_type = rel.get("to"), rel.get("type")
+            elif rel.get("to") == source_id:
+                nbr_id, rel_type = rel.get("from"), rel.get("type")
+            else:
+                continue
+            if not nbr_id or nbr_id in seen:
+                continue
+            node = self.nodes.get(nbr_id)
+            if not node or node.get("label") not in self._AUGMENT_LABELS:
+                continue
+            text = self._node_text(node)
+            if text:
+                seen.add(nbr_id)
+                neighbours.append({"id": nbr_id, "text": text, "label": node.get("label"), "rel_type": rel_type})
+        return neighbours
+
     def get_related_documents(self, client_id: str) -> List[Dict[str, Any]]:
         related_ids = [
             rel["to"]

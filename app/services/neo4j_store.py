@@ -253,6 +253,34 @@ class Neo4jStore:
             )
         return [json.loads(r["data"]) for r in rows if r["data"]]
 
+    def graph_neighbors(self, source_id: str) -> List[Dict[str, Any]]:
+        """Content-bearing nodes one hop from ``source_id`` — GraphRAG context
+        expansion (mirrors GraphStore.graph_neighbors). Matches the source by
+        any id property and returns connected Policy/Regulation/Evidence/
+        Document neighbours with their text and the relationship type."""
+        cypher = (
+            "MATCH (n)-[r]-(m) "
+            "WHERE (n.policy_id=$id OR n.regulation_id=$id OR n.evidence_id=$id OR n.doc_id=$id OR n.client_id=$id) "
+            "AND (m:Policy OR m:Regulation OR m:Evidence OR m:Document) "
+            "RETURN m, type(r) AS rel_type"
+        )
+        out: List[Dict[str, Any]] = []
+        seen: set[str] = set()
+        with self.driver.session() as s:
+            rows = s.execute_read(lambda tx: list(tx.run(cypher, id=source_id)))
+        for row in rows:
+            node = dict(row["m"])
+            nbr_id = node.get("policy_id") or node.get("regulation_id") or node.get("evidence_id") or node.get("doc_id") or ""
+            if not nbr_id or nbr_id in seen:
+                continue
+            text = " ".join(
+                filter(None, [node.get("title"), node.get("summary"), node.get("description"), node.get("excerpt"), node.get("name")])
+            )
+            if text:
+                seen.add(nbr_id)
+                out.append({"id": nbr_id, "text": text, "label": next(iter(row["m"].labels), ""), "rel_type": row["rel_type"]})
+        return out
+
     def get_related_documents(self, client_id: str) -> List[Dict[str, Any]]:
         with self.driver.session() as s:
             res = s.run(
