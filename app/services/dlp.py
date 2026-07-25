@@ -115,13 +115,54 @@ def mask_pii(text: str) -> Tuple[str, List[str]]:
 
 
 # --------------------------------------------------------------- guardrails
+# Patterns are intentionally verb-anchored (the attack verb must precede the
+# target noun) so ordinary compliance questions — "what sanctions screening is
+# required", "show me the AML policy", "does this client have restrictions" —
+# do NOT trip them. Each targets a distinct attack class.
 _INJECTION_PATTERNS = [
-    re.compile(r"ignore\s+(all\s+|any\s+)?(previous|prior|above|earlier)\s+(instructions|prompts|rules)", re.I),
-    re.compile(r"disregard\s+(your|the|all)\s+(instructions|rules|guidelines|system\s+prompt)", re.I),
-    re.compile(r"(reveal|show|print|repeat)\s+(your|the)\s+(system\s+)?prompt", re.I),
-    re.compile(r"you\s+are\s+now\s+(a|an|in)\b", re.I),
-    re.compile(r"(jailbreak|dan\s+mode|developer\s+mode)", re.I),
-    re.compile(r"pretend\s+(you\s+have\s+no|there\s+are\s+no)\s+(rules|restrictions|guidelines)", re.I),
+    # Ignore / override prior or system instructions.
+    re.compile(
+        r"\b(ignore|disregard|forget|override|bypass|skip|circumvent)\b[^.]{0,40}"
+        r"\b(previous|prior|above|earlier|preceding|all|any|the|your|system)\b[^.]{0,25}"
+        r"\b(instruction|instructions|prompt|prompts|rule|rules|guideline|guidelines|direction|directions|message|messages)\b",
+        re.I,
+    ),
+    # Disable / bypass a control: restrictions, safety, audit, logging, compliance, screening, checks.
+    re.compile(
+        r"\b(ignore|disable|turn\s+off|switch\s+off|bypass|skip|override|circumvent|remove|suspend|drop)\b[^.]{0,30}"
+        r"\b(restriction|restrictions|guardrail|guardrails|safeguard|safeguards|safety|filter|filters|"
+        r"control|controls|compliance|audit|logging|screening|check|checks)\b",
+        re.I,
+    ),
+    # Exfiltrate the system prompt / configuration.
+    re.compile(
+        r"\b(reveal|show|print|repeat|expose|dump|leak|display|output|give\s+me|tell\s+me)\b[^.]{0,25}"
+        r"\byour\s+(system\s+)?(prompt|instructions|configuration|config|directive|directives)\b",
+        re.I,
+    ),
+    re.compile(r"\b(reveal|repeat|print|show|expose|leak|output)\b[^.]{0,20}\bthe\s+system\s+prompt\b", re.I),
+    # Exfiltrate raw / bulk PII across clients.
+    re.compile(
+        r"\b(raw|all|every|entire|full)\b[^.]{0,30}"
+        r"\b(pii|personally\s+identifiable|client\s+pii|client\s+data|client\s+records|clients?['’]?\s+(pii|data|records))\b",
+        re.I,
+    ),
+    re.compile(r"\b(pii|personal\s+data|personal\s+information)\b[^.]{0,25}\b(every|all|each)\b[^.]{0,15}\bclient", re.I),
+    # Persona / jailbreak overrides.
+    re.compile(r"\b(jailbreak|dan\s+mode|do\s+anything\s+now|developer\s+mode)\b", re.I),
+    re.compile(r"\byou\s+are\s+now\b", re.I),
+    re.compile(
+        r"\b(you|assistant|ai)\b[^.]{0,20}\b(have|has|with)\s+no\s+"
+        r"(restrictions|rules|filters|limits|limitations|guardrails|guidelines|constraints)\b",
+        re.I,
+    ),
+    re.compile(r"\bpretend\b[^.]{0,20}\b(no|without|zero)\b[^.]{0,15}\b(rules|restrictions|guidelines|limits|limitations|constraints)\b", re.I),
+    # Claimed-authority override of the actual role/permissions ("override your restrictions/permissions/role").
+    re.compile(
+        r"\boverride\b[^.]{0,25}\b(your|the|any|all)\b[^.]{0,15}"
+        r"\b(restriction|restrictions|rule|rules|guardrail|guardrails|permission|permissions|role|roles|access)\b",
+        re.I,
+    ),
 ]
 
 
