@@ -408,9 +408,12 @@ def run_supervisor(
                 "text": text,
                 "request_id": request_id,
             },
-            # Correlate the LangSmith agent-graph trace with the Azure Monitor
-            # trace via shared ids (no-op when LangSmith is disabled).
-            config=langgraph_config("supervisor", request_id=request_id, trace_id=trace_id, user_id=user_id),
+            # Name the top-level LangSmith trace as the business operation it is
+            # (a compliance request being triaged/routed across the agent tools);
+            # sub-agents invoked inside this call nest underneath it as children.
+            # Also correlates with the Azure Monitor trace via shared ids (no-op
+            # when LangSmith is disabled).
+            config=langgraph_config("compliance_triage", request_id=request_id, trace_id=trace_id, user_id=user_id),
         )
     result = final_state["result"]
     if isinstance(result, dict):

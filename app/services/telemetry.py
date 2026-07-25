@@ -142,9 +142,19 @@ def langgraph_config(run_name: str, **metadata: Any) -> Dict[str, Any]:
     in LangSmith carry the *same* ``request_id``/``trace_id`` as the Azure
     Monitor infrastructure trace, so one can be pivoted to the other. Harmless
     when LangSmith is disabled — the metadata is simply never exported.
+
+    ``run_name`` is the label the trace shows up under in LangSmith, so it
+    should read as a business operation (e.g. ``compliance_triage``). Passing
+    this config only to the *top-level* ``.invoke()`` (and letting sub-agents
+    run within it) keeps everything nested under one trace rather than
+    scattering separate roots. An ``environment`` tag/metadata field
+    (``production`` when deployed to Azure, else ``local``) is added so the
+    LangSmith project can be filtered to just real deployed traffic.
     """
     meta = {key: value for key, value in metadata.items() if value is not None}
-    return {"run_name": run_name, "tags": ["ib-agentic", run_name], "metadata": meta}
+    environment = "production" if os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING") else "local"
+    meta["environment"] = environment
+    return {"run_name": run_name, "tags": ["ib-agentic", environment, run_name], "metadata": meta}
 
 
 def current_trace_id() -> str | None:
