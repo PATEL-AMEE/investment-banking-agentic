@@ -31,9 +31,43 @@ REQUIRED_DOCUMENTS: Dict[str, str] = {
     "beneficial_ownership_evidence": "Beneficial ownership documentation",
 }
 
-# In-memory application register (demo scope; a real deployment would persist
-# this next to the graph). Keyed by application_id.
+# Application register. Backed by the shared store (Neo4j in the cloud, so a
+# submission on one replica is visible to the reviewer on another and survives
+# restarts) via its key/value collection; falls back to this in-memory dict
+# when no store is wired (unit tests / offline). Keyed by application_id.
 _applications: Dict[str, Dict[str, Any]] = {}
+_KV_COLLECTION = "Application"
+_store: Any = None
+
+
+def set_store(store: Any) -> None:
+    """Point application persistence at the shared store (called at startup)."""
+    global _store
+    _store = store
+
+
+def _kv_ok() -> bool:
+    return _store is not None and hasattr(_store, "kv_put")
+
+
+def _save(record: Dict[str, Any]) -> None:
+    """Persist a record, preferring the shared store; in-memory otherwise."""
+    if _kv_ok():
+        try:
+            _store.kv_put(_KV_COLLECTION, record["application_id"], record)
+            return
+        except Exception:
+            pass
+    _applications[record["application_id"]] = record
+
+
+def _all_applications() -> List[Dict[str, Any]]:
+    if _kv_ok():
+        try:
+            return _store.kv_list(_KV_COLLECTION)
+        except Exception:
+            pass
+    return list(_applications.values())
 
 
 def submit_application(
@@ -96,7 +130,6 @@ def submit_application(
             "review_task_id": kyc.get("review_task_id"),
         },
     }
-    _applications[application_id] = record
     _ensure_final_review(record, store, audit_log)
 
     if audit_log is not None:
@@ -110,6 +143,7 @@ def submit_application(
             metadata={"product": product, "documents_missing": len(missing)},
         )
     notify_status_change(record, store, audit_log)
+    _save(record)  # persist after all mutations (review id, notified status)
     return record
 
 
@@ -169,6 +203,7 @@ def add_documents(
             },
         )
     notify_status_change(record, store, audit_log)
+    _save(record)  # persist the shrunken checklist + any new review id
     return record
 
 
@@ -222,17 +257,24 @@ def _ensure_final_review(record: Dict[str, Any], store: Any, audit_log: Any = No
 
 
 def get_application(application_id: str) -> Optional[Dict[str, Any]]:
+    if _kv_ok():
+        try:
+            found = _store.kv_get(_KV_COLLECTION, application_id)
+            if found is not None:
+                return found
+        except Exception:
+            pass
     return _applications.get(application_id)
 
 
 def applications_for_client(client_id: str) -> List[Dict[str, Any]]:
-    return [r for r in _applications.values() if r.get("client_id") == client_id]
+    return [r for r in _all_applications() if r.get("client_id") == client_id]
 
 
 def application_for_review(review_id: str) -> Optional[Dict[str, Any]]:
     """The application whose final/escalation review is ``review_id`` (if any)."""
-    for record in _applications.values():
-        if record["internal"].get("review_task_id") == review_id:
+    for record in _all_applications():
+        if record.get("internal", {}).get("review_task_id") == review_id:
             return record
     return None
 

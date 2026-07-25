@@ -19,8 +19,8 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
-from dataclasses import dataclass, field
-from typing import Dict, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any, Dict, Optional
 
 _PBKDF2_ROUNDS = 120_000
 
@@ -37,8 +37,44 @@ class ClientAccount:
     application_ids: list[str] = field(default_factory=list)
 
 
-# email (lowercased) -> account
+# email (lowercased) -> account. Backed by the shared store (so a client who
+# signs up on one replica can sign in on another and survives restarts) with an
+# in-memory fallback when no store is wired (unit tests / offline).
 _accounts: Dict[str, ClientAccount] = {}
+_KV_COLLECTION = "ClientAccount"
+_store: Any = None
+
+
+def set_store(store: Any) -> None:
+    """Point client-identity persistence at the shared store (called at startup)."""
+    global _store
+    _store = store
+
+
+def _kv_ok() -> bool:
+    return _store is not None and hasattr(_store, "kv_put")
+
+
+def _save(account: ClientAccount) -> None:
+    if _kv_ok():
+        try:
+            _store.kv_put(_KV_COLLECTION, account.email, asdict(account))
+            return
+        except Exception:
+            pass
+    _accounts[account.email] = account
+
+
+def _load(email: str) -> Optional[ClientAccount]:
+    key = email.strip().lower()
+    if _kv_ok():
+        try:
+            data = _store.kv_get(_KV_COLLECTION, key)
+            if data is not None:
+                return ClientAccount(**data)
+        except Exception:
+            pass
+    return _accounts.get(key)
 
 
 def _hash_password(password: str, salt: bytes | None = None) -> str:
@@ -70,12 +106,13 @@ def register(
     just links the new application to the account.
     """
     key = email.strip().lower()
-    existing = _accounts.get(key)
+    existing = _load(key)
     if existing is not None:
         if application_id not in existing.application_ids:
             existing.application_ids.append(application_id)
         existing.client_id = client_id
         existing.company_name = company_name
+        _save(existing)
         return existing
     account = ClientAccount(
         email=key,
@@ -84,13 +121,13 @@ def register(
         company_name=company_name,
         application_ids=[application_id],
     )
-    _accounts[key] = account
+    _save(account)
     return account
 
 
 def authenticate(email: str, password: str) -> Optional[ClientAccount]:
     """Return the account when email + password match and are verified."""
-    account = _accounts.get(email.strip().lower())
+    account = _load(email)
     if account is None or not account.verified:
         return None
     if not _verify_password(password, account.password_hash):
@@ -99,4 +136,4 @@ def authenticate(email: str, password: str) -> Optional[ClientAccount]:
 
 
 def get_account(email: str) -> Optional[ClientAccount]:
-    return _accounts.get(email.strip().lower())
+    return _load(email)

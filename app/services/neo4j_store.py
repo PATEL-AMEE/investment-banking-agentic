@@ -222,6 +222,37 @@ class Neo4jStore:
         with self.driver.session() as s:
             return [dict(rec["c"]) for rec in s.run(cypher, **params)]
 
+    # ---- generic key/value store (application records, client accounts) ----
+    # Persisted as :KV nodes carrying a JSON blob, so onboarding applications
+    # and client-portal accounts survive restarts and are shared across every
+    # replica (the whole point: a client applies on pod A, staff review on pod B).
+    def kv_put(self, collection: str, key: str, value: Dict[str, Any]) -> None:
+        blob = json.dumps(value, default=str)
+        with self.driver.session() as s:
+            s.execute_write(
+                lambda tx: tx.run(
+                    "MERGE (n:KV {coll:$c, k:$k}) SET n.data=$d",
+                    c=collection, k=key, d=blob,
+                ).consume()
+            )
+
+    def kv_get(self, collection: str, key: str) -> Optional[Dict[str, Any]]:
+        with self.driver.session() as s:
+            rec = s.execute_read(
+                lambda tx: tx.run(
+                    "MATCH (n:KV {coll:$c, k:$k}) RETURN n.data AS data LIMIT 1",
+                    c=collection, k=key,
+                ).single()
+            )
+        return json.loads(rec["data"]) if rec and rec["data"] else None
+
+    def kv_list(self, collection: str) -> List[Dict[str, Any]]:
+        with self.driver.session() as s:
+            rows = s.execute_read(
+                lambda tx: list(tx.run("MATCH (n:KV {coll:$c}) RETURN n.data AS data", c=collection))
+            )
+        return [json.loads(r["data"]) for r in rows if r["data"]]
+
     def get_related_documents(self, client_id: str) -> List[Dict[str, Any]]:
         with self.driver.session() as s:
             res = s.run(

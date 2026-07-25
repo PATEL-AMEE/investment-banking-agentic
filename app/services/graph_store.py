@@ -126,6 +126,24 @@ class GraphStore:
         )
         return clients[:limit] if limit else clients
 
+    # ---- generic key/value store (application records, client accounts) ----
+    def kv_put(self, collection: str, key: str, value: Dict[str, Any]) -> None:
+        import copy
+
+        self._kv = getattr(self, "_kv", {})
+        self._kv.setdefault(collection, {})[key] = copy.deepcopy(value)
+
+    def kv_get(self, collection: str, key: str) -> Dict[str, Any] | None:
+        import copy
+
+        value = getattr(self, "_kv", {}).get(collection, {}).get(key)
+        return copy.deepcopy(value) if value is not None else None
+
+    def kv_list(self, collection: str) -> List[Dict[str, Any]]:
+        import copy
+
+        return [copy.deepcopy(v) for v in getattr(self, "_kv", {}).get(collection, {}).values()]
+
     def get_related_documents(self, client_id: str) -> List[Dict[str, Any]]:
         related_ids = [
             rel["to"]

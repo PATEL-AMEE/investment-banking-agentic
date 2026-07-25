@@ -81,6 +81,16 @@ else:
     store = GraphStore(data_dir=BASE_DIR.parent / "data")
     seed_demo_data(store, data_dir=BASE_DIR.parent / "data")
 
+# Persist client-portal state (application records + client accounts) in the
+# shared store so the onboarding→review flow works across replicas and survives
+# restarts. On Neo4j this is shared/durable; on the in-memory GraphStore it's
+# per-process (fine for a single local instance and for tests).
+from app.services import applications as _applications
+from app.services import client_identity as _client_identity
+
+_applications.set_store(store)
+_client_identity.set_store(store)
+
 
 # Mount reviewer static UI
 try:
