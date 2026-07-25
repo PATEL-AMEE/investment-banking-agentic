@@ -14,11 +14,30 @@ in-memory store otherwise, and as the fallback when the service is down.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List
+import re
+from typing import Any, Dict, List, Tuple
 
 from app.services.vector_store import InMemoryVectorStore
 
 logger = logging.getLogger("retrieval")
+
+# Near-duplicate detection: the corpus carries templated policy variants whose
+# wording differs only by a stopword or punctuation (e.g. "Sanctions screening
+# mandatory for all counterparties" vs "Sanctions screening is mandatory for
+# all counterparties."). Two texts collapse to the same *signature* — the set
+# of content tokens with stopwords removed — so retrieval returns one
+# representative per distinct policy instead of citing the same rule 3 times.
+_SIG_WORD = re.compile(r"[a-z0-9]+")
+_SIG_STOPWORDS = {
+    "the", "a", "an", "is", "are", "was", "be", "been", "for", "of", "to", "in",
+    "on", "and", "or", "with", "by", "at", "as", "that", "this", "it", "its",
+    "must", "shall", "should", "may", "not", "no", "all", "any", "per",
+}
+
+
+def _dedupe_signature(text: str) -> Tuple[str, ...]:
+    """Order-independent content-token signature used to spot near-duplicates."""
+    return tuple(sorted({t for t in _SIG_WORD.findall(text.lower()) if t not in _SIG_STOPWORDS}))
 
 _FALLBACK = [
     {"source_id": "POL-AML-01", "excerpt": "Enhanced customer due diligence is required for high-risk profiles."}
@@ -130,18 +149,39 @@ class GraphRAGRetriever:
 
     def retrieve(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
         self._ensure_index()
-        hits = self.vector_store.search(query, k=k)
+        # Pull a wider pool than k: duplicate variants of the same policy would
+        # otherwise fill the top-k and push the canonical rule out of range, so
+        # we over-fetch, then collapse duplicates back down to k distinct hits.
+        pool = self.vector_store.search(query, k=max(k * 5, 15))
         # Trim the weak tail: keep the top hit, drop hits far below it so
         # off-topic excerpts neither dilute precision nor feed the LLM.
-        if hits:
-            floor = (hits[0].get("score") or 0.0) * _MIN_RELATIVE_SCORE
-            hits = [h for h in hits if (h.get("score") or 0.0) >= floor] or hits[:1]
+        if pool:
+            floor = (pool[0].get("score") or 0.0) * _MIN_RELATIVE_SCORE
+            pool = [h for h in pool if (h.get("score") or 0.0) >= floor] or pool[:1]
+
+        # Collapse near-duplicates: one group per distinct policy meaning. The
+        # representative is the canonical (lowest) id — the golden "-01" rather
+        # than a generated "-09"/"-17" clone — shown at the group's best rank
+        # and best score, so the copilot cites each rule once.
+        groups: Dict[Tuple[str, ...], Dict[str, Any]] = {}
+        for order, hit in enumerate(pool):
+            sig = _dedupe_signature(hit["text"])
+            group = groups.get(sig)
+            if group is None:
+                groups[sig] = {"hit": hit, "score": hit.get("score") or 0.0, "order": order}
+            else:
+                group["score"] = max(group["score"], hit.get("score") or 0.0)
+                group["order"] = min(group["order"], order)
+                if hit["id"] < group["hit"]["id"]:
+                    group["hit"] = hit  # adopt the canonical (lowest) id
+
         citations: List[Dict[str, Any]] = []
-        for hit in hits:
+        for group in sorted(groups.values(), key=lambda g: g["order"])[:k]:
+            hit = group["hit"]
             citation = {
                 "source_id": hit["id"],
                 "excerpt": hit["text"][:300],
-                "score": hit["score"],
+                "score": round(group["score"], 4),
                 "source_type": hit["metadata"].get("label", "Unknown"),
             }
             related = self._graph_context(hit["metadata"])

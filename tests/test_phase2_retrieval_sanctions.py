@@ -37,6 +37,41 @@ def test_graphrag_retriever_returns_scored_citations():
     assert any(c.get("score") is not None for c in citations)
 
 
+def test_dedupe_signature_collapses_templated_variants():
+    """Wording that differs only by a stopword/punctuation shares a signature."""
+    from app.services.retrieval import _dedupe_signature
+
+    assert _dedupe_signature("Sanctions screening mandatory for all counterparties") == _dedupe_signature(
+        "Sanctions screening is mandatory for all counterparties."
+    )
+    assert _dedupe_signature("Enhanced due diligence required for high-risk clients") == _dedupe_signature(
+        "Enhanced due diligence is required for high-risk clients."
+    )
+
+
+def test_retrieve_collapses_duplicate_policies_to_canonical(monkeypatch):
+    """Near-duplicate policies collapse to one citation carrying the canonical id."""
+    from app.services import retrieval
+
+    # Force the local vector store so the test is hermetic (no Azure AI Search).
+    monkeypatch.setattr(retrieval, "_new_vector_store", lambda: InMemoryVectorStore())
+    store = GraphStore(data_dir=Path("data"))
+    store.nodes = {
+        "POL-DUP-01": {"label": "Policy", "policy_id": "POL-DUP-01", "summary": "Sanctions screening mandatory for all counterparties"},
+        "POL-DUP-09": {"label": "Policy", "policy_id": "POL-DUP-09", "summary": "Sanctions screening is mandatory for all counterparties."},
+        "POL-DUP-17": {"label": "Policy", "policy_id": "POL-DUP-17", "summary": "Sanctions screening is mandatory for all counterparties."},
+        "POL-OTHER-01": {"label": "Policy", "policy_id": "POL-OTHER-01", "summary": "Beneficial ownership verification for corporate clients"},
+    }
+    store.relationships = []
+    retriever = retrieval.GraphRAGRetriever(store)
+    retriever.build_index()
+
+    ids = [c["source_id"] for c in retriever.retrieve("sanctions screening for counterparties", k=3)]
+    # The three templated variants collapse to exactly one, keeping the lowest id.
+    assert ids.count("POL-DUP-01") == 1
+    assert "POL-DUP-09" not in ids and "POL-DUP-17" not in ids
+
+
 # -------------------------------------------------------------------- chunking
 def test_chunk_text_overlaps_and_covers_all_content():
     text = " ".join(f"word{i}" for i in range(600))
