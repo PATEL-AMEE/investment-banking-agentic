@@ -4,92 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Compliance Platform — Dashboard</title>
+<link rel="stylesheet" href="/static/app.css">
 <style>
-  :root{
-    color-scheme:light;
-    --plane:#eef1f7; --surface:#ffffff; --surface-2:#f7f9fc; --surface-3:#eef2f8;
-    --ink:#0b1526; --ink-2:#55617a; --muted:#8b95a8;
-    --grid:#e8ecf3; --hair:rgba(11,21,38,.09);
-    --accent:#1a5cff; --accent-2:#0b40cc; --accent-soft:#e9f0ff;
-    --good:#0a8a5f; --warning:#b7791f; --critical:#d64545;
-    --good-bg:rgba(10,138,95,.12); --warn-bg:rgba(183,121,31,.14); --crit-bg:rgba(214,69,69,.12);
-    /* sidebar is a fixed deep-navy panel in both themes (premium SaaS pattern) */
-    --side-bg:#0b1b3a; --side-bg-2:#0e2148; --side-ink:#eaf0fd; --side-ink-2:#93a4c8;
-    --side-hair:rgba(255,255,255,.09); --side-active:rgba(255,255,255,.10);
-    --radius:16px; --radius-sm:10px;
-    --shadow:0 1px 2px rgba(11,21,38,.04),0 6px 22px rgba(11,21,38,.06);
-    --shadow-sm:0 1px 2px rgba(11,21,38,.05);
-    --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-    --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
-  }
-  @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
-    color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
-    --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
-    --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
-    --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
-    --side-bg:#0a1120; --side-bg-2:#0e1830; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
-  }}
-  :root[data-theme="dark"]{
-    color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
-    --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
-    --accent:#4f8cff; --accent-2:#6ba0ff; --accent-soft:#15223c;
-    --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
-    --side-bg:#0a1120; --side-bg-2:#0e1830; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
-  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
-  a{color:var(--accent);text-decoration:none}
-  svg{display:block}
-
-  /* ---------- app shell ---------- */
-  .app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
-
-  /* ---------- sidebar ---------- */
-  .sidebar{position:sticky;top:0;height:100vh;background:linear-gradient(180deg,var(--side-bg),var(--side-bg-2));
-    border-right:1px solid var(--side-hair);display:flex;flex-direction:column;padding:18px 14px;gap:6px;overflow-y:auto}
-  .brand{display:flex;align-items:center;gap:12px;padding:6px 8px 16px;margin-bottom:6px;border-bottom:1px solid var(--side-hair)}
-  .mark{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;
-    background:linear-gradient(140deg,#2f6bff,#0b40cc);box-shadow:0 4px 14px rgba(26,92,255,.4)}
-  .brand-name{font-size:14.5px;font-weight:700;letter-spacing:-.01em;color:var(--side-ink);line-height:1.15}
-  .brand-sub{font-size:11px;color:var(--side-ink-2);letter-spacing:.02em}
-  .nav-label{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--side-ink-2);opacity:.7;padding:14px 10px 6px}
-  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--side-ink-2);font-size:13.5px;font-weight:500;transition:.14s;position:relative}
-  .nav-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
-  .nav-item:hover{background:var(--side-hair);color:var(--side-ink)}
-  .nav-item.active{background:var(--side-active);color:#fff;font-weight:600}
-  .nav-item.active::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#3f79ff,#0b40cc)}
-  .side-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--side-hair);font-size:11.5px;color:var(--side-ink-2)}
-  .side-foot .badge.live{color:#5fe0a8;background:rgba(95,224,168,.12)}
-
-  /* ---------- top bar ---------- */
-  .main{min-width:0;display:flex;flex-direction:column}
-  .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:14px;
-    padding:14px clamp(18px,3vw,34px);background:color-mix(in srgb,var(--surface) 86%,transparent);
-    backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--hair)}
-  h1{font-size:19px;font-weight:720;letter-spacing:-.02em;margin:0}
-  .sub{margin:2px 0 0;color:var(--muted);font-size:12.5px}
-  .actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  #authslot{display:flex;gap:8px;align-items:center}
-  button{font:inherit;cursor:pointer}
-  .btn{font-size:13px;padding:8px 13px;border-radius:10px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2);
-    text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.15s;font-weight:500}
-  .btn:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--hair));box-shadow:var(--shadow-sm)}
-  .btn.pri{background:linear-gradient(140deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;box-shadow:0 4px 12px rgba(26,92,255,.28)}
-  .btn.pri:hover{filter:brightness(1.06);color:#fff}
-  .btn.icon{padding:8px 11px}
-  .badge{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:6px 11px;border-radius:999px;border:1px solid var(--hair);color:var(--ink-2);background:var(--surface)}
-  .badge.live{color:var(--good);background:var(--good-bg);border-color:transparent;display:inline-flex;align-items:center;gap:7px}
-  .badge.live .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
-  @keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
-
-  /* ---------- content ---------- */
-  .content{padding:22px clamp(18px,3vw,34px) 60px;max-width:1300px}
-  .meta{margin:0 0 22px;font-size:12px;color:var(--muted);font-family:var(--mono)}
-  .eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:30px 0 14px;display:flex;align-items:center;gap:10px}
-  .eyebrow::after{content:"";flex:1;height:1px;background:var(--hair)}
-  .eyebrow:first-of-type{margin-top:4px}
-
   .kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:14px}
   .tile{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:16px 16px 15px;box-shadow:var(--shadow);overflow:hidden;transition:.18s}
   .tile::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 20%,transparent));opacity:.85}
@@ -97,32 +13,14 @@
   .tile .label{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);text-transform:uppercase}
   .tile .value{font-size:clamp(22px,2.4vw,30px);font-weight:750;letter-spacing:-.03em;margin-top:9px;color:var(--ink)}
   .tile .foot{font-size:11.5px;color:var(--muted);margin-top:4px}
-
   .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start}
-  .card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
-  .card h3{margin:0 0 3px;font-size:15.5px;font-weight:680;letter-spacing:-.01em}
-  .card .cap{margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.45}
   .stack{display:flex;flex-direction:column;gap:18px}
-
   .barline{display:flex;height:20px;border-radius:8px;overflow:hidden;margin:2px 0 12px;background:var(--surface-3);box-shadow:inset 0 0 0 1px var(--hair)}
   .barline i{height:100%;transition:width .5s ease}
   .barline i+i{box-shadow:inset 1px 0 0 rgba(255,255,255,.35)}
   .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--ink-2);font-weight:500}
   .legend span{display:inline-flex;align-items:center;gap:7px}
   .sw{width:11px;height:11px;border-radius:3px}
-  table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--grid)}
-  thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:1px solid var(--hair)}
-  tbody tr{transition:.12s}
-  tbody tr:hover{background:var(--surface-2)}
-  tbody tr:last-child td{border-bottom:none}
-  td.r,th.r{text-align:right}
-  .pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-block;letter-spacing:.02em;text-transform:capitalize}
-  .pill.good{color:var(--good);background:var(--good-bg)}
-  .pill.warn{color:var(--warning);background:var(--warn-bg)}
-  .pill.crit{color:var(--critical);background:var(--crit-bg)}
-  .idc{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
-
   .kv{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;padding:9px 0;border-bottom:1px solid var(--grid)}
   .kv:last-of-type{border:none}
   .kv b{font-weight:720;font-size:16px}
@@ -131,59 +29,24 @@
   .ev .t{font-weight:640}
   .ev .d{color:var(--ink-2)}
   .ev .ts{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:2px}
-  .empty{font-size:12.5px;color:var(--muted);font-style:italic;padding:6px 0}
-
   form.try{display:flex;flex-direction:column;gap:12px}
   .field{display:flex;flex-direction:column;gap:5px}
   .field label{font-size:11.5px;font-weight:600;color:var(--ink-2);text-transform:uppercase;letter-spacing:.02em}
-  input[type=text],select{font:inherit;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--hair);background:var(--surface-2);color:var(--ink);transition:.15s}
-  input[type=text]:focus,select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .row{display:flex;gap:12px;align-items:center}
   .check{display:flex;gap:8px;align-items:center;font-size:13px;color:var(--ink-2)}
   .result{font-size:12.5px;background:var(--surface-2);border:1px solid var(--hair);border-radius:var(--radius-sm);padding:14px;display:none;margin-top:4px}
   .result.show{display:block}
   .result .line{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--grid)}
   .result .line:last-child{border:none}
-
   footer{margin-top:42px;padding-top:18px;border-top:1px solid var(--hair);font-size:12px;color:var(--muted)}
-
-  /* ---------- responsive ---------- */
   @media (max-width:1080px){.kpis{grid-template-columns:repeat(3,1fr)}.cols{grid-template-columns:1fr}}
-  @media (max-width:860px){
-    .app{grid-template-columns:70px 1fr}
-    .brand-text,.brand-sub,.nav-label,.nav-item span,.side-foot{display:none}
-    .brand{justify-content:center;padding:6px 0 14px}
-    .nav-item{justify-content:center;padding:11px}
-    .nav-item.active::before{left:-14px}
-  }
-  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}h1{font-size:17px}}
+  @media (max-width:560px){.kpis{grid-template-columns:repeat(2,1fr)}}
 </style>
 <script src="/static/auth.js"></script>
 </head>
-<body>
+<body data-page="dashboard">
 <div class="app">
-  <!-- ===== sidebar ===== -->
-  <aside class="sidebar">
-    <div class="brand">
-      <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h3.5l2 5 4-13 2.5 8H21"/></svg></span>
-      <div class="brand-text">
-        <div class="brand-name">Compliance</div>
-        <div class="brand-sub">Agentic AI Platform</div>
-      </div>
-    </div>
-
-    <div class="nav-label">Overview</div>
-    <a class="nav-item active" href="/dashboard"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg><span>Dashboard</span></a>
-    <a class="nav-item" href="/chat"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg><span>Copilot chat</span></a>
-    <a class="nav-item" href="/reviewer"><svg viewBox="0 0 24 24"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>Review queue</span></a>
-
-    <div class="nav-label">Observability</div>
-    <a class="nav-item" href="/telemetry"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>Tracing</span></a>
-
-    <div class="side-foot"><span class="badge live"><span class="dot"></span>Systems live</span></div>
-  </aside>
-
-  <!-- ===== main ===== -->
+  <aside class="sidebar" id="appSidebar"></aside>
   <main class="main">
     <header class="topbar">
       <div>
@@ -262,6 +125,7 @@
   </main>
 </div>
 
+<script src="/static/shell.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));

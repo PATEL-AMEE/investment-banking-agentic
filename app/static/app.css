@@ -1,0 +1,115 @@
+/* ============================================================
+   Shared design system for the staff app (dashboard, chat,
+   reviewer, tracing). Navy-blue default. Theme-aware.
+   Pages add only their own component styles on top of this.
+   ============================================================ */
+:root{
+  color-scheme:light;
+  --plane:#eef1f7; --surface:#ffffff; --surface-2:#f7f9fc; --surface-3:#eef2f8;
+  --ink:#0b1526; --ink-2:#55617a; --muted:#8b95a8;
+  --grid:#e8ecf3; --hair:rgba(11,21,38,.09);
+  --accent:#1e3a8a; --accent-2:#142a63; --accent-soft:#e9edf8;
+  --good:#0a8a5f; --warning:#b7791f; --critical:#d64545;
+  --good-bg:rgba(10,138,95,.12); --warn-bg:rgba(183,121,31,.14); --crit-bg:rgba(214,69,69,.12);
+  --side-bg:#0b1b3a; --side-bg-2:#0e2148; --side-ink:#eaf0fd; --side-ink-2:#93a4c8;
+  --side-hair:rgba(255,255,255,.09); --side-active:rgba(255,255,255,.10);
+  --radius:16px; --radius-sm:10px;
+  --shadow:0 1px 2px rgba(11,21,38,.04),0 6px 22px rgba(11,21,38,.06);
+  --shadow-sm:0 1px 2px rgba(11,21,38,.05);
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"SF Mono","Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
+  --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
+  --accent:#7a9bea; --accent-2:#96b2f0; --accent-soft:#172440;
+  --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
+  --side-bg:#0a1120; --side-bg-2:#0e1830; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark; --plane:#080b13; --surface:#111726; --surface-2:#161d2f; --surface-3:#1b2438;
+  --ink:#eef2f9; --ink-2:#a6b1c6; --muted:#77839a; --grid:#212b40; --hair:rgba(255,255,255,.08);
+  --accent:#7a9bea; --accent-2:#96b2f0; --accent-soft:#172440;
+  --good-bg:rgba(10,138,95,.20); --warn-bg:rgba(183,121,31,.22); --crit-bg:rgba(214,69,69,.20);
+  --side-bg:#0a1120; --side-bg-2:#0e1830; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 26px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+.num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+a{color:var(--accent);text-decoration:none}
+svg{display:block}
+
+/* ---------- app shell ---------- */
+.app{display:grid;grid-template-columns:250px 1fr;min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;background:linear-gradient(180deg,var(--side-bg),var(--side-bg-2));
+  border-right:1px solid var(--side-hair);display:flex;flex-direction:column;padding:18px 14px;gap:6px;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:12px;padding:6px 8px 16px;margin-bottom:6px;border-bottom:1px solid var(--side-hair)}
+.mark{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;flex:none;
+  background:linear-gradient(140deg,#2a4fb5,#14265c);box-shadow:0 4px 14px rgba(20,42,99,.5)}
+.brand-name{font-size:14.5px;font-weight:700;letter-spacing:-.01em;color:var(--side-ink);line-height:1.15}
+.brand-sub{font-size:11px;color:var(--side-ink-2);letter-spacing:.02em}
+.nav-label{font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--side-ink-2);opacity:.7;padding:14px 10px 6px}
+.nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:10px;color:var(--side-ink-2);font-size:13.5px;font-weight:500;transition:.14s;position:relative}
+.nav-item svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
+.nav-item:hover{background:var(--side-hair);color:var(--side-ink)}
+.nav-item.active{background:var(--side-active);color:#fff;font-weight:600}
+.nav-item.active::before{content:"";position:absolute;left:-14px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:linear-gradient(180deg,#3f79ff,#1e3a8a)}
+.side-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--side-hair);font-size:11.5px;color:var(--side-ink-2)}
+.side-foot .badge.live{color:#5fe0a8;background:rgba(95,224,168,.12)}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:14px clamp(18px,3vw,34px);background:color-mix(in srgb,var(--surface) 86%,transparent);
+  backdrop-filter:saturate(1.4) blur(10px);border-bottom:1px solid var(--hair)}
+.topbar h1{font-size:19px;font-weight:720;letter-spacing:-.02em;margin:0}
+.topbar .sub{margin:2px 0 0;color:var(--muted);font-size:12.5px}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#authslot{display:flex;gap:8px;align-items:center}
+.content{padding:22px clamp(18px,3vw,34px) 60px;max-width:1300px;flex:1}
+.meta{margin:0 0 22px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:30px 0 14px;display:flex;align-items:center;gap:10px}
+.eyebrow::after{content:"";flex:1;height:1px;background:var(--hair)}
+.eyebrow:first-of-type{margin-top:4px}
+
+/* ---------- buttons / badges ---------- */
+button{font:inherit;cursor:pointer}
+.btn{font-size:13px;padding:8px 13px;border-radius:10px;border:1px solid var(--hair);background:var(--surface);color:var(--ink-2);
+  text-decoration:none;display:inline-flex;align-items:center;gap:6px;transition:.15s;font-weight:500}
+.btn:hover{color:var(--ink);border-color:color-mix(in srgb,var(--accent) 40%,var(--hair));box-shadow:var(--shadow-sm)}
+.btn.pri{background:linear-gradient(140deg,var(--accent),var(--accent-2));color:#fff;border-color:transparent;font-weight:600;box-shadow:0 4px 12px rgba(30,58,138,.28)}
+.btn.pri:hover{filter:brightness(1.08);color:#fff}
+.btn.icon{padding:8px 11px}
+.btn:disabled{opacity:.5;cursor:default}
+.badge{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;padding:6px 11px;border-radius:999px;border:1px solid var(--hair);color:var(--ink-2);background:var(--surface)}
+.badge.live{color:var(--good);background:var(--good-bg);border-color:transparent;display:inline-flex;align-items:center;gap:7px}
+.badge.live .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,currentColor 55%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+/* ---------- cards / table / pills / inputs ---------- */
+.card{background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.card h3{margin:0 0 3px;font-size:15.5px;font-weight:680;letter-spacing:-.01em}
+.card .cap{margin:0 0 16px;font-size:12.5px;color:var(--muted);line-height:1.45}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:10px 10px;border-bottom:1px solid var(--grid)}
+thead th{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;border-bottom:1px solid var(--hair)}
+tbody tr{transition:.12s}
+tbody tr:hover{background:var(--surface-2)}
+tbody tr:last-child td{border-bottom:none}
+td.r,th.r{text-align:right}
+.pill{font-size:11px;font-weight:700;padding:3px 10px;border-radius:999px;display:inline-block;letter-spacing:.02em;text-transform:capitalize}
+.pill.good{color:var(--good);background:var(--good-bg)}
+.pill.warn{color:var(--warning);background:var(--warn-bg)}
+.pill.crit{color:var(--critical);background:var(--crit-bg)}
+.pill.muted{color:var(--muted);background:var(--surface-2);border:1px solid var(--hair);text-transform:none;font-weight:600}
+.idc{font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.empty{font-size:12.5px;color:var(--muted);font-style:italic;padding:6px 0}
+input[type=text],input[type=email],input[type=password],select,textarea{font:inherit;font-size:13.5px;padding:10px 12px;border-radius:var(--radius-sm);
+  border:1px solid var(--hair);background:var(--surface-2);color:var(--ink);transition:.15s}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+
+@media (max-width:860px){
+  .app{grid-template-columns:70px 1fr}
+  .brand-text,.brand-sub,.nav-label,.nav-item span,.side-foot{display:none}
+  .brand{justify-content:center;padding:6px 0 14px}
+  .nav-item{justify-content:center;padding:11px}
+}

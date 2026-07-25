@@ -33,7 +33,7 @@ async function loadPending() {
     pendingEl.innerHTML = '';
     data.forEach(r => {
       const card = document.createElement('div');
-      card.className = 'card';
+      card.className = 'review-item';
       card.innerHTML = `<strong>${r.review_id}</strong> — ${r.reason} <br/><small>client: ${r.client_id}</small>`;
       if (canResolve) {
         card.addEventListener('click', () => showResolver(r));
@@ -59,7 +59,7 @@ function showResolver(review) {
     <input id="reviewerName" placeholder="your name" value="${(window.ibAuth && window.ibAuth.user) || ''}" />
     <label>Notes</label>
     <textarea id="notes"></textarea>
-    <button id="submitResolve">Submit</button>
+    <button id="submitResolve" class="btn pri">Submit</button>
   `;
   resolverEl.appendChild(html);
   document.getElementById('submitResolve').addEventListener('click', () => submitResolve(review.review_id));

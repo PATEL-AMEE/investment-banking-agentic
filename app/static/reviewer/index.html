@@ -1,33 +1,70 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Reviewer Dashboard</title>
-    <link rel="stylesheet" href="/reviewer/static/styles.css" />
-    <script src="/static/auth.js"></script>
-  </head>
-  <body>
-    <div class="container">
-      <header>
-        <h1>Reviewer Dashboard</h1>
-        <div id="authslot" style="display:flex;gap:8px;align-items:center"></div>
-      </header>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compliance Platform — Review queue</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  .rev-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start}
+  .review-item{padding:13px 15px;border:1px solid var(--hair);border-radius:var(--radius-sm);margin-bottom:10px;
+    background:var(--surface-2);cursor:pointer;transition:.14s;font-size:13.5px}
+  .review-item:hover{border-color:color-mix(in srgb,var(--accent) 45%,var(--hair));box-shadow:var(--shadow-sm);transform:translateY(-1px)}
+  .review-item strong{color:var(--ink);font-family:var(--mono);font-size:12.5px}
+  .review-item small{color:var(--muted)}
+  .viewonly{padding:10px 13px;background:var(--warn-bg);border:1px solid color-mix(in srgb,var(--warning) 40%,transparent);
+    border-radius:var(--radius-sm);color:var(--warning);font-size:13px;margin-bottom:14px;font-weight:500}
+  .error{color:var(--critical);font-size:13px}
+  #resolver h3{margin:0 0 4px;font-size:15px}
+  #resolver label{display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;color:var(--ink-2);margin:12px 0 5px}
+  #resolver select,#resolver input,#resolver textarea{width:100%}
+  #resolver textarea{min-height:80px;resize:vertical}
+  #resolver #submitResolve{margin-top:14px}
+  @media (max-width:900px){.rev-cols{grid-template-columns:1fr}}
+</style>
+<script src="/static/auth.js"></script>
+</head>
+<body data-page="reviewer">
+<div class="app">
+  <aside class="sidebar" id="appSidebar"></aside>
+  <main class="main">
+    <header class="topbar">
+      <div>
+        <h1>Review queue</h1>
+        <p class="sub">Human-in-the-loop tasks · approve or reject flagged clients</p>
+      </div>
+      <div class="actions">
+        <span class="badge live"><span class="dot"></span>Live</span>
+        <span id="authslot"></span>
+        <button class="btn icon" id="theme" type="button" title="Toggle theme">◐</button>
+      </div>
+    </header>
 
-      <main>
-        <section>
-          <h2>Pending Reviews</h2>
+    <div class="content">
+      <div class="rev-cols">
+        <div class="card">
+          <h3>Pending reviews</h3>
+          <p class="cap">Tasks awaiting a human decision</p>
           <div id="pending"></div>
-        </section>
-        <section>
-          <h2>Resolve</h2>
-          <div id="resolver">
-            <p>Select a review to resolve from the list.</p>
-          </div>
-        </section>
-      </main>
+        </div>
+        <div class="card">
+          <h3>Resolve</h3>
+          <p class="cap">Select a review from the list to approve or reject it</p>
+          <div id="resolver"><p class="empty">Select a review to resolve from the list.</p></div>
+        </div>
+      </div>
     </div>
+  </main>
+</div>
 
-    <script src="/reviewer/static/main.js"></script>
-  </body>
+<script src="/static/shell.js"></script>
+<script>
+  document.getElementById("theme").addEventListener("click", () => {
+    const r = document.documentElement, cur = r.getAttribute("data-theme");
+    const dark = matchMedia("(prefers-color-scheme:dark)").matches;
+    r.setAttribute("data-theme", cur==="dark"?"light":cur==="light"?"dark":(dark?"light":"dark"));
+  });
+</script>
+<script src="/reviewer/static/main.js"></script>
+</body>
 </html>

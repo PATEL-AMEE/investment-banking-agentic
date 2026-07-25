@@ -3,63 +3,49 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Investment Banking Platform — Staff sign in</title>
+<title>Compliance Platform — Staff sign in</title>
+<link rel="stylesheet" href="/static/app.css">
 <style>
-  :root {
-    color-scheme: light;
-    --plane:#f4f6f9; --surface:#fff; --surface-2:#fafbfc;
-    --ink:#0e1217; --ink-2:#51565e; --muted:#8a8f98;
-    --grid:#e6e9ee; --hair:rgba(14,18,23,.10);
-    --accent:#2a78d6; --accent-soft:#eaf2fc;
-    --critical:#d03b3b; --crit-bg:rgba(208,59,59,.12);
-    --radius:14px; --shadow:0 1px 2px rgba(14,18,23,.04),0 4px 16px rgba(14,18,23,.05);
-    --font:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  }
-  @media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
-    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
-    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
-    --accent:#3987e5; --accent-soft:#17273b; --crit-bg:rgba(208,59,59,.20);
-  }}
-  :root[data-theme="dark"]{
-    color-scheme:dark; --plane:#0c0e11; --surface:#16191d; --surface-2:#1b1f24;
-    --ink:#f3f5f7; --ink-2:#b3b9c2; --muted:#7e848d; --grid:#262b31; --hair:rgba(255,255,255,.10);
-    --accent:#3987e5; --accent-soft:#17273b; --crit-bg:rgba(208,59,59,.20);
-  }
-  *{box-sizing:border-box}
-  body{margin:0;background:var(--plane);color:var(--ink);font-family:var(--font);line-height:1.5;-webkit-font-smoothing:antialiased;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-  .card{width:100%;max-width:440px;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);box-shadow:var(--shadow);padding:30px 28px}
-  .brand{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
-  h1{font-size:21px;font-weight:680;letter-spacing:-.02em;margin:8px 0 6px}
-  .sub{margin:0 0 22px;color:var(--ink-2);font-size:13.5px}
-
-  /* Microsoft sign-in button — standard SSO button styling */
-  .ms{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;padding:12px;border-radius:9px;
-    border:1px solid var(--hair);background:var(--surface-2);color:var(--ink);font:inherit;font-size:14.5px;font-weight:600;cursor:pointer}
-  .ms:hover{border-color:var(--accent)}
+  body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;
+    background:
+      radial-gradient(900px 500px at 15% -10%, color-mix(in srgb,var(--accent) 14%,transparent), transparent 70%),
+      radial-gradient(700px 500px at 110% 110%, color-mix(in srgb,var(--accent) 12%,transparent), transparent 70%),
+      var(--plane)}
+  .card{width:100%;max-width:430px;background:var(--surface);border:1px solid var(--hair);border-radius:22px;box-shadow:0 10px 40px rgba(11,21,38,.14);padding:34px 32px}
+  .logo{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+  .mark{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none;background:linear-gradient(140deg,#2a4fb5,#14265c);box-shadow:0 5px 16px rgba(20,42,99,.4)}
+  .logo .name{font-size:15px;font-weight:750;letter-spacing:-.01em;color:var(--ink)}
+  .logo .tag{font-size:11.5px;color:var(--muted)}
+  h1{font-size:22px;font-weight:720;letter-spacing:-.02em;margin:0 0 6px}
+  .sub{margin:0 0 24px;color:var(--ink-2);font-size:13.5px;line-height:1.5}
+  .ms{display:flex;align-items:center;justify-content:center;gap:11px;width:100%;padding:13px;border-radius:11px;
+    border:1px solid var(--hair);background:var(--surface-2);color:var(--ink);font:inherit;font-size:14.5px;font-weight:600;cursor:pointer;transition:.15s}
+  .ms:hover{border-color:var(--accent);box-shadow:var(--shadow-sm)}
   .ms:disabled{opacity:.6;cursor:default}
   .ms svg{width:19px;height:19px;flex:none}
-
-  /* Microsoft-style email entry */
   .signin{margin-top:22px;display:none}
   .signin.show{display:block}
-  .signin h2{font-size:16px;font-weight:680;margin:0 0 4px}
+  .signin h2{font-size:16px;font-weight:700;margin:0 0 4px}
   .signin p.h{font-size:12.5px;color:var(--ink-2);margin:0 0 14px}
-  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin:0 0 6px}
-  input[type=email]{font:inherit;font-size:14px;width:100%;padding:11px 12px;border-radius:9px;border:1px solid var(--hair);background:var(--surface-2);color:var(--ink)}
-  input:focus{outline:2px solid var(--accent);outline-offset:-1px}
-  button.pri{font:inherit;font-weight:600;font-size:14px;width:100%;margin-top:16px;padding:11px;border-radius:9px;border:none;background:var(--accent);color:#fff;cursor:pointer}
+  label{display:block;font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.02em;color:var(--ink-2);margin:0 0 6px}
+  input[type=email]{width:100%;font-size:14px;padding:12px}
+  button.pri{font:inherit;font-weight:600;font-size:14.5px;width:100%;margin-top:16px;padding:13px;border-radius:11px;border:none;
+    background:linear-gradient(140deg,var(--accent),var(--accent-2));color:#fff;cursor:pointer;box-shadow:0 4px 14px rgba(30,58,138,.3);transition:.15s}
+  button.pri:hover{filter:brightness(1.08)}
   button.pri:disabled{opacity:.5;cursor:default}
   .back{margin-top:12px;background:none;border:none;color:var(--accent);font:inherit;font-size:13px;cursor:pointer;padding:4px 0}
-  .error{display:none;margin-top:14px;padding:10px 13px;border-radius:9px;background:var(--crit-bg);color:var(--critical);font-size:13px}
-  footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--grid);font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6}
-  footer a{color:var(--accent);text-decoration:none}
+  .error{display:none;margin-top:14px;padding:11px 13px;border-radius:10px;background:var(--crit-bg);color:var(--critical);font-size:13px}
+  footer{margin-top:24px;padding-top:16px;border-top:1px solid var(--hair);font-size:11.5px;color:var(--muted);text-align:center;line-height:1.6}
 </style>
 </head>
 <body>
 <div class="card">
-  <div class="brand">Investment Banking · Agentic AI Platform</div>
+  <div class="logo">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13h3.5l2 5 4-13 2.5 8H21"/></svg></span>
+    <div><div class="name">Compliance Platform</div><div class="tag">Agentic AI · Investment Banking</div></div>
+  </div>
   <h1>Staff sign in</h1>
-  <p class="sub">Use your corporate Microsoft work account. Clients don't sign in here — they use the <a href="/client" style="color:var(--accent)">client portal</a>.</p>
+  <p class="sub">Use your corporate Microsoft work account. Clients don't sign in here — they use the <a href="/client/login">client portal</a>.</p>
 
   <!-- Step 1: the Microsoft SSO button -->
   <div id="entry">
