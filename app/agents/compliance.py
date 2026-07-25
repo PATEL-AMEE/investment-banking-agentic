@@ -77,12 +77,17 @@ def _decide(state: ComplianceState) -> Dict[str, Any]:
     risk_score = float(state["client"].get("risk_score", 0.0))
     amount = float(state["tx_data"].get("amount", 0))
     confidence = min(0.99, 0.65 + (risk_score * 0.2) + (0.05 if state["rule_hits"] else 0.0) + (0.05 if amount > 500000 else 0.0))
-    review_required = risk_score > 0.7 or amount > 500000 or confidence < 0.8
+    # Three-tier outcome: a very-high-risk client (or a very large transaction)
+    # fails outright; an elevated-risk/low-confidence case warns and is routed
+    # to human review; otherwise it passes. All non-pass outcomes require review.
+    fail = risk_score >= 0.85 or amount >= 5_000_000
+    review_required = fail or risk_score > 0.7 or amount > 500000 or confidence < 0.8
+    decision = "fail" if fail else ("warn" if review_required else "pass")
     return {
         "risk_score": risk_score,
         "confidence": confidence,
         "review_required": review_required,
-        "decision": "warn" if review_required else "pass",
+        "decision": decision,
         "review_task_id": None,
     }
 
