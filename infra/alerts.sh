@@ -180,6 +180,18 @@ create_log_alert "agentic-graph-store-down" 0 "PT5M" "PT5M" \
 | summarize failures = count()
 | where failures > 3'
 
+# 9. Groundedness / hallucination. Every live answer is scored inline for
+#    faithfulness (fraction of the answer supported by its retrieved context);
+#    hallucination_rate is 1 - faithfulness. A falling mean means answers are
+#    drifting from their sources even while retrieval still returns citations —
+#    a subtler failure than the ungrounded-answers rule above.
+create_log_alert "agentic-hallucination-rate" 1 "PT30M" "PT30M" \
+  "Mean copilot faithfulness dropped below 0.5 (hallucination rate over 50%)." \
+  'customMetrics
+| where name == "copilot.faithfulness"
+| summarize mean_faithfulness = sum(valueSum) / sum(valueCount), answers = sum(valueCount)
+| where answers > 5 and mean_faithfulness < 0.5'
+
 echo
 echo "Done. Alert rules provisioned in $RESOURCE_GROUP, notifying $ALERT_EMAIL."
 echo "Review them with: az monitor scheduled-query list -g $RESOURCE_GROUP -o table"

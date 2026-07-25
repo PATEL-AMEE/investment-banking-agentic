@@ -109,10 +109,21 @@ def _generate_answer(state: CopilotState) -> Dict[str, Any]:
     # grounded model reports nothing relevant, hold the scope boundary here too.
     if _looks_off_domain(generation["answer"]):
         return _out_of_scope(state)
+    # Score groundedness inline with the cheap deterministic proxies (same as
+    # the eval harness' lexical engine) so every live answer — not just golden
+    # eval runs — carries a faithfulness/relevancy read for the metrics pipeline.
+    from app.eval.harness import answer_relevancy, faithfulness
+
+    contexts = [c.get("excerpt", "") for c in state["citations"]]
+    faith = faithfulness(generation["answer"], contexts)
+    relevancy = answer_relevancy(state["query"], generation["answer"])
     result: Dict[str, Any] = {
         "answer": generation["answer"],
         "citations": state["citations"],
         "generation_mode": generation["mode"],
+        "faithfulness": faith,
+        "hallucination_rate": round(1 - faith, 4),
+        "answer_relevancy": relevancy,
     }
     if state["guard"]["flags"]:
         result["guardrails"] = state["guard"]["flags"]
@@ -150,7 +161,13 @@ def get_copilot_agent():
 
 
 def run_copilot(query: str, store: Any) -> Dict[str, Any]:
-    from app.services.telemetry import current_trace_id, langgraph_config, record_copilot_outcome, span
+    from app.services.telemetry import (
+        current_trace_id,
+        langgraph_config,
+        record_copilot_outcome,
+        record_copilot_quality,
+        span,
+    )
 
     with span("agent.copilot") as current:
         final_state = get_copilot_agent().invoke(
@@ -173,4 +190,10 @@ def run_copilot(query: str, store: Any) -> Dict[str, Any]:
         current.set_attribute("copilot.outcome", outcome)
         current.set_attribute("copilot.citation_count", citation_count)
         current.set_attribute("copilot.generation_mode", generation_mode)
+        # Answered requests carry an inline groundedness score — emit it so
+        # faithfulness/hallucination trend continuously in Azure Monitor.
+        if outcome == "answered" and "faithfulness" in result:
+            record_copilot_quality(result["faithfulness"], result["answer_relevancy"], generation_mode)
+            current.set_attribute("copilot.faithfulness", result["faithfulness"])
+            current.set_attribute("copilot.answer_relevancy", result["answer_relevancy"])
     return result

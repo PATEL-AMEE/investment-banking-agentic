@@ -141,6 +141,12 @@ _copilot_answers = _meter.create_counter(
 _copilot_citations = _meter.create_histogram(
     "copilot.citations", unit="1", description="Citations retrieved per copilot answer"
 )
+_copilot_faithfulness = _meter.create_histogram(
+    "copilot.faithfulness", unit="1", description="Lexical faithfulness of copilot answers (0-1)"
+)
+_copilot_relevancy = _meter.create_histogram(
+    "copilot.answer_relevancy", unit="1", description="Answer relevancy of copilot answers (0-1)"
+)
 
 
 # Indicative Azure OpenAI list prices in USD per 1M tokens, matched on the
@@ -246,6 +252,18 @@ def record_copilot_outcome(outcome: str, citation_count: int, generation_mode: s
     """
     _copilot_answers.add(1, {"outcome": outcome, "generation_mode": generation_mode})
     _copilot_citations.record(citation_count, {"outcome": outcome})
+
+
+def record_copilot_quality(faithfulness: float, answer_relevancy: float, generation_mode: str = "unknown") -> None:
+    """Inline RAG-quality scoring of one production answer (cheap deterministic
+    proxies, same as the eval harness' lexical engine). Exported as metrics so
+    faithfulness/hallucination are tracked continuously and alertable — the
+    on-demand eval harness only runs against the golden set, but every live
+    answer flows through here. hallucination_rate is 1 - faithfulness, so the
+    faithfulness histogram alone alerts on both."""
+    dims = {"generation_mode": generation_mode}
+    _copilot_faithfulness.record(faithfulness, dims)
+    _copilot_relevancy.record(answer_relevancy, dims)
 
 
 def force_flush_metrics(timeout_millis: int = 5_000) -> bool:
