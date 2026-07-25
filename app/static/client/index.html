@@ -69,8 +69,8 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>🏦 Open a Corporate Account</h1>
-  <p class="sub">Submit your application below, or <a href="/client/login" style="color:var(--accent);font-weight:600;text-decoration:none">sign in</a> to check an existing one.</p>
+  <h1 id="pageTitle">🏦 Open a Corporate Account</h1>
+  <p class="sub" id="pageSub">Submit your application below, or <a href="/client/login" style="color:var(--accent);font-weight:600;text-decoration:none">sign in</a> to check an existing one.</p>
 
   <!-- intake form -->
   <form class="card" id="intake">
@@ -137,6 +137,19 @@
 
   const K_TOKEN = "client_token", K_APP = "client_app_id", K_CO = "client_company";
 
+  // Header reflects the mode: the intake form vs. an existing application's status.
+  const FORM_SUB = 'Submit your application below, or <a href="/client/login" style="color:var(--accent);font-weight:600;text-decoration:none">sign in</a> to check an existing one.';
+  function setHeader(mode) {
+    const t = document.getElementById("pageTitle"), s = document.getElementById("pageSub");
+    if (mode === "status") {
+      t.textContent = "🏦 Your application";
+      s.textContent = "Track your onboarding progress below.";
+    } else {
+      t.textContent = "🏦 Open a Corporate Account";
+      s.innerHTML = FORM_SUB;
+    }
+  }
+
   function stepIndex(status) {
     // received=0 screening=1 review=2 decision=3
     if (status === "approved" || status === "declined") return 3;
@@ -147,6 +160,7 @@
   function renderStatus(view) {
     form.style.display = "none";
     statusCard.style.display = "block";
+    setHeader("status");
     document.getElementById("stTitle").textContent =
       "Application " + view.applicationId + " · " + view.company;
     const idx = stepIndex(view.status);
@@ -282,6 +296,7 @@
     statusCard.style.display = "none";
     form.style.display = "block";
     form.reset();
+    setHeader("form");
   });
 
   // Returning client: show their application status straight away.
