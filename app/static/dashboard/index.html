@@ -165,7 +165,7 @@ async function load() {
     <td class="idc">${esc(x.client_id)}</td><td>${esc(x.name)}</td><td>${esc(x.country)}</td>
     <td class="r num">${x.risk_score.toFixed(2)}</td><td class="r num">${x.confidence.toFixed(2)}</td>
     <td><span class="pill ${pill(x.decision)}">${esc(x.decision)}</span></td>
-    <td>${x.review_required?'<span class="pill warn">required</span>':'—'}</td></tr>`).join('');
+    <td>${x.decision==='fail'?'<span class="pill crit">escalate</span>':(x.review_required?'<span class="pill warn">review</span>':'—')}</td></tr>`).join('');
 
   $('#revPending').textContent = d.reviews.pending;
   $('#revResolved').textContent = d.reviews.resolved;
