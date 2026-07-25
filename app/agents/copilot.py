@@ -74,7 +74,9 @@ def _refuse(state: CopilotState) -> Dict[str, Any]:
     answer = "This request was blocked by prompt guardrails and has not been processed."
     return {
         "messages": state["messages"] + [{"role": "assistant", "content": answer}],
-        "result": {"answer": answer, "citations": [], "guardrails": state["guard"]["flags"]},
+        # ``blocked`` marks the guardrail refusal so it can be told apart from an
+        # out-of-scope refusal and a real answer when recording the outcome.
+        "result": {"answer": answer, "citations": [], "guardrails": state["guard"]["flags"], "blocked": True},
     }
 
 
@@ -148,11 +150,27 @@ def get_copilot_agent():
 
 
 def run_copilot(query: str, store: Any) -> Dict[str, Any]:
-    from app.services.telemetry import current_trace_id, langgraph_config, span
+    from app.services.telemetry import current_trace_id, langgraph_config, record_copilot_outcome, span
 
-    with span("agent.copilot"):
+    with span("agent.copilot") as current:
         final_state = get_copilot_agent().invoke(
             {"query": query, "store": store},
             config=langgraph_config("copilot", trace_id=current_trace_id()),
         )
-    return final_state["result"]
+        result = final_state["result"]
+        # Every request returns HTTP 200 whether it answered, refused, or fell
+        # back to the stub, so the outcome has to be recorded explicitly for a
+        # refusal spike or a retrieval regression to be visible in monitoring.
+        if result.get("blocked"):
+            outcome = "blocked"
+        elif result.get("out_of_scope"):
+            outcome = "out_of_scope"
+        else:
+            outcome = "answered"
+        citation_count = len(result.get("citations") or [])
+        generation_mode = result.get("generation_mode", "none")
+        record_copilot_outcome(outcome, citation_count, generation_mode)
+        current.set_attribute("copilot.outcome", outcome)
+        current.set_attribute("copilot.citation_count", citation_count)
+        current.set_attribute("copilot.generation_mode", generation_mode)
+    return result

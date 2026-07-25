@@ -35,12 +35,17 @@ spec:
             limits:
               cpu: "1"
               memory: 1Gi
+          # Readiness checks dependencies (503 when the graph store is
+          # unreachable) so a pod that can't serve leaves the rotation.
           readinessProbe:
             httpGet:
-              path: /health
+              path: /ready
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 10
+            failureThreshold: 3
+          # Liveness stays dependency-free: restarting pods during a Neo4j
+          # outage would turn a degradation into an outage.
           livenessProbe:
             httpGet:
               path: /health

@@ -123,6 +123,54 @@ GET  /api/telemetry/trace/8e06f7c6...
 - **Latency alerts**: in Azure Monitor, alert per step (e.g. GraphRAG traversal
   over a threshold) so degradation is caught before it affects analysts.
 
+## Metrics and alerting
+
+Traces answer "why was *this* request slow?" They cannot answer "what fraction
+of requests failed in the last five minutes?" — the in-memory span ring is
+per-process, capped at 500 spans, and lost on restart, so with 2-5 replicas
+behind the HPA it only ever shows a fraction of production. The `record_*`
+helpers in `telemetry.py` therefore also emit **OpenTelemetry metrics**, which
+are pre-aggregated per replica and exported to Application Insights
+`customMetrics` every 60s.
+
+| Metric | Dimensions | Answers |
+|---|---|---|
+| `llm.calls` | model, provider, outcome, reason, status_code | Error rate; **fallback rate**; 429 throttling vs. 5xx outage |
+| `llm.tokens` | model, provider, kind | Prompt-size regressions |
+| `llm.cost_usd` | model, provider | Daily spend vs. budget |
+| `llm.latency` | model, provider, outcome | p95/p99 (not just the mean) |
+| `guardrail.events` | flag, detail | Prompt-injection attempts; PII-masking rate |
+| `copilot.answers` | outcome, generation_mode | Refusal-rate spikes |
+| `copilot.citations` | outcome | Groundedness — answers with zero citations |
+
+**The signal that matters most is `llm.calls{outcome="fallback"}`.** The LLM
+adapter never propagates a provider error: it returns deterministic stub text so
+compliance workflows keep functioning. That is the right availability trade-off,
+but it means a failing model produces a plausible-looking compliance answer that
+no model wrote, with an HTTP 200 and no error in the logs. `reason` separates the
+two cases: `mock-fallback` (the provider failed — an incident) from `mock` (no
+provider configured — expected locally and in CI).
+
+Alert rules are provisioned by **`infra/alerts.sh`** (`az monitor
+scheduled-query`, idempotent, notifying an action group), covering: silent
+degradation, 429 quota exhaustion, LLM error rate, p95 latency, daily cost,
+ungrounded answers, refusal spikes, injection attempts, and graph-store
+unavailability.
+
+## Health probes
+
+Two endpoints, because liveness and readiness must not ask the same question:
+
+- **`/health`** — liveness. Deliberately dependency-free. A liveness probe that
+  checked Neo4j would restart every replica during a Neo4j outage, turning a
+  degradation into an outage.
+- **`/ready`** — readiness. Checks the graph store, LLM provider, vector store,
+  and telemetry wiring. Returns **503** when the graph store is unreachable, so
+  Kubernetes removes that replica from rotation; returns **200 with a
+  `degraded` list** when the LLM is unconfigured, since the app still serves.
+  The LLM check is configuration-only on purpose — probes run every 10s and a
+  real completion per probe would burn quota.
+
 ## Retention & governance
 
 - **Separate retention.** Traces are for debugging (days to weeks); the audit

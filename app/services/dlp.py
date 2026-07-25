@@ -172,15 +172,24 @@ def guard_prompt(query: str) -> Dict[str, Any]:
     Returns ``allowed`` (injection attempts are refused), the PII-``sanitised``
     query to use downstream, and the ``flags`` explaining any action taken.
     """
-    flags: List[str] = []
-    for pattern in _INJECTION_PATTERNS:
-        if pattern.search(query):
-            flags.append("prompt_injection")
-            break
-    sanitised, pii_types = mask_pii(query)
-    flags.extend(f"pii_masked:{t}" for t in pii_types)
-    return {
-        "allowed": "prompt_injection" not in flags,
-        "sanitised": sanitised,
-        "flags": flags,
-    }
+    from app.services.telemetry import record_guardrail, span
+
+    with span("tool.guard_prompt") as current:
+        flags: List[str] = []
+        for pattern in _INJECTION_PATTERNS:
+            if pattern.search(query):
+                flags.append("prompt_injection")
+                break
+        sanitised, pii_types = mask_pii(query)
+        flags.extend(f"pii_masked:{t}" for t in pii_types)
+        allowed = "prompt_injection" not in flags
+        # Injection-attempt and PII-masking rates are audit-relevant signals, so
+        # they go out as metrics rather than only living in the response body.
+        record_guardrail(flags)
+        current.set_attribute("guardrail.allowed", allowed)
+        current.set_attribute("guardrail.flag_count", len(flags))
+        return {
+            "allowed": allowed,
+            "sanitised": sanitised,
+            "flags": flags,
+        }

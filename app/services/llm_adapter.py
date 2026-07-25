@@ -109,14 +109,34 @@ class LLMAdapter:
         else:
             raise RuntimeError("No LLM provider configured")
 
-        from app.services.telemetry import llm_usage, span
+        from app.services.telemetry import record_llm_failure, record_llm_success, span
 
         model_name = self._model_name(provider)
         with span("llm.chat", provider=provider, model=model_name) as current:
             started = time.perf_counter()
-            response = requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT_SECONDS)
-            response.raise_for_status()
-            body = response.json()
+            try:
+                response = requests.post(url, json=payload, headers=headers, timeout=_TIMEOUT_SECONDS)
+                response.raise_for_status()
+                body = response.json()
+            except Exception as exc:
+                # Count the failure before re-raising. Callers swallow the
+                # exception and serve stub text, so this is the only place the
+                # provider error is still visible. The status code is recorded
+                # as a span attribute too, so 429 (quota) can be told apart from
+                # 5xx (outage) in Azure Monitor without parsing exception text.
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                latency_ms = (time.perf_counter() - started) * 1000
+                record_llm_failure(
+                    model_name,
+                    provider,
+                    latency_ms,
+                    status_code=status,
+                    error_type=type(exc).__name__,
+                )
+                current.set_attribute("llm.error_type", type(exc).__name__)
+                if status is not None:
+                    current.set_attribute("http.status_code", status)
+                raise
             latency_ms = (time.perf_counter() - started) * 1000
             if provider == "vertex":
                 usage = body.get("usageMetadata") or {}
@@ -128,7 +148,7 @@ class LLMAdapter:
                 prompt_tokens = int(usage.get("prompt_tokens") or 0)
                 completion_tokens = int(usage.get("completion_tokens") or 0)
                 content = body["choices"][0]["message"]["content"].strip()
-            llm_usage.record(model_name, prompt_tokens, completion_tokens, latency_ms)
+            record_llm_success(model_name, provider, prompt_tokens, completion_tokens, latency_ms)
             current.set_attribute("llm.prompt_tokens", prompt_tokens)
             current.set_attribute("llm.completion_tokens", completion_tokens)
             current.set_attribute("llm.latency_ms", round(latency_ms, 1))
@@ -142,9 +162,16 @@ class LLMAdapter:
         return self.model
 
     # -------------------------------------------------------------- reasoning
+    def _note_fallback(self, reason: str) -> None:
+        """Count a stub-served response so silent degradation is measurable."""
+        from app.services.telemetry import record_llm_fallback
+
+        record_llm_fallback(self._model_name(self.provider), self.provider, reason)
+
     def generate_reasoning(self, prompt: str) -> Dict[str, Any]:
         """Short compliance reasoning for a decision (back-compat shape)."""
         if self.provider == "mock":
+            self._note_fallback("mock")
             return {
                 "summary": "LLM disabled; deterministic rule-based decision recorded without generated narrative.",
                 "mode": "mock",
@@ -166,6 +193,7 @@ class LLMAdapter:
             )
             return {"summary": summary, "mode": self.provider, "model": self._model_name(self.provider)}
         except Exception as exc:
+            self._note_fallback("mock-fallback")
             return {
                 "summary": "LLM unavailable; deterministic rule-based decision recorded without generated narrative.",
                 "mode": "mock-fallback",
@@ -176,6 +204,7 @@ class LLMAdapter:
     def answer_with_citations(self, query: str, citations: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Grounded policy answer composed strictly from retrieved citations."""
         if self.provider == "mock":
+            self._note_fallback("mock")
             return {"answer": f"Policy guidance for: {query}", "mode": "mock"}
         sources = "\n".join(
             f"[{c.get('source_id')}] ({c.get('source_type', 'Source')}) {c.get('excerpt', '')}" for c in citations
@@ -205,6 +234,7 @@ class LLMAdapter:
             )
             return {"answer": answer, "mode": self.provider}
         except Exception as exc:
+            self._note_fallback("mock-fallback")
             return {"answer": f"Policy guidance for: {query}", "mode": "mock-fallback", "error": str(exc)[:200]}
 
 

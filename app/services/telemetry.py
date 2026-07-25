@@ -1,21 +1,31 @@
-"""Observability: OpenTelemetry tracing + LLM token/cost accounting.
+"""Observability: OpenTelemetry tracing + metrics + LLM token/cost accounting.
 
 Every agent run, tool call, and LLM request becomes an OpenTelemetry span.
 Spans are kept in a bounded in-memory ring for the ``/api/telemetry``
 endpoints; set ``OTEL_CONSOLE=true`` to also print spans, and swap the
 exporter for Azure Monitor (``azure-monitor-opentelemetry``) when deployed.
 
-Token usage from the LLM adapter is aggregated into running counters so
-cost per model is visible without a external APM.
+Alongside the spans, the ``record_*`` helpers below emit **OpenTelemetry
+metrics** (counters/histograms). Metrics matter because the in-memory span
+ring is per-process, bounded, and lost on restart — with 2-5 replicas behind
+the HPA it only ever shows a fraction of production. Metrics are
+pre-aggregated and exported centrally to Azure Monitor as ``customMetrics``,
+which is what makes cheap *metric* alerts (rather than log-search alerts)
+possible on failure rate, cost, and latency.
+
+Token usage from the LLM adapter is also aggregated into in-process counters
+so cost per model is visible on the local telemetry page without an APM.
 """
 from __future__ import annotations
 
 import os
 import threading
 from contextlib import contextmanager
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, Iterable, Iterator, List
 
-from opentelemetry import trace
+from opentelemetry import metrics, trace
+from opentelemetry.sdk.metrics import MeterProvider
+from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import ReadableSpan, TracerProvider
 from opentelemetry.sdk.trace.export import ConsoleSpanExporter, SimpleSpanProcessor, SpanExporter, SpanExportResult
@@ -65,7 +75,8 @@ class _RingExporter(SpanExporter):
 
 
 _ring = _RingExporter()
-_provider = TracerProvider(resource=Resource.create({"service.name": "ib-agentic-platform"}))
+_RESOURCE = Resource.create({"service.name": "ib-agentic-platform"})
+_provider = TracerProvider(resource=_RESOURCE)
 _provider.add_span_processor(SimpleSpanProcessor(_ring))
 if os.getenv("OTEL_CONSOLE", "").lower() == "true":
     _provider.add_span_processor(SimpleSpanProcessor(ConsoleSpanExporter()))
@@ -90,6 +101,161 @@ trace.set_tracer_provider(_provider)
 tracer = trace.get_tracer("ib.agents")
 
 
+# ------------------------------------------------------------------- metrics
+# Exported to Application Insights ``customMetrics`` on a 60s interval when
+# APPLICATIONINSIGHTS_CONNECTION_STRING is set. With no reader configured the
+# MeterProvider still accepts recordings, it just never exports them — so the
+# record_* helpers below are always safe to call (local runs, tests, CI).
+_metric_readers: List[PeriodicExportingMetricReader] = []
+if _appinsights:
+    try:
+        from azure.monitor.opentelemetry.exporter import AzureMonitorMetricExporter
+
+        _metric_readers.append(
+            PeriodicExportingMetricReader(
+                AzureMonitorMetricExporter(connection_string=_appinsights),
+                export_interval_millis=60_000,
+            )
+        )
+    except Exception:  # exporter not installed / bad connection string
+        pass
+
+_meter_provider = MeterProvider(resource=_RESOURCE, metric_readers=_metric_readers)
+metrics.set_meter_provider(_meter_provider)
+_meter = metrics.get_meter("ib.agents")
+
+# One counter per thing worth alerting on. Dimensions (model, provider,
+# outcome, …) are attributes so a single alert rule can be split by model.
+_llm_calls = _meter.create_counter(
+    "llm.calls", unit="1", description="LLM chat completions by outcome (success/error/fallback)"
+)
+_llm_tokens = _meter.create_counter("llm.tokens", unit="1", description="LLM tokens by kind (prompt/completion)")
+_llm_cost = _meter.create_counter("llm.cost_usd", unit="USD", description="Estimated LLM spend")
+_llm_latency = _meter.create_histogram("llm.latency", unit="ms", description="LLM call latency")
+_guardrail_events = _meter.create_counter(
+    "guardrail.events", unit="1", description="DLP/prompt-guardrail hits by flag"
+)
+_copilot_answers = _meter.create_counter(
+    "copilot.answers", unit="1", description="Copilot answers by outcome (answered/out_of_scope/blocked)"
+)
+_copilot_citations = _meter.create_histogram(
+    "copilot.citations", unit="1", description="Citations retrieved per copilot answer"
+)
+
+
+# Indicative Azure OpenAI list prices in USD per 1M tokens, matched on the
+# deployment name. These are for *cost visibility and budget alerting*, not
+# billing — confirm against your own Azure pricing/agreement, or override with
+# LLM_PRICE_INPUT_PER_1M / LLM_PRICE_OUTPUT_PER_1M for the deployment you run.
+_MODEL_PRICING_PER_1M: Dict[str, tuple[float, float]] = {
+    "gpt-4o-mini": (0.15, 0.60),
+    "gpt-4o": (2.50, 10.00),
+    "gpt-4.1-mini": (0.40, 1.60),
+    "gpt-4.1": (2.00, 8.00),
+    "o4-mini": (1.10, 4.40),
+}
+_DEFAULT_PRICING = (0.15, 0.60)
+
+
+def _pricing_for(model: str) -> tuple[float, float]:
+    """(input, output) USD per 1M tokens for a deployment name."""
+    override_in = os.getenv("LLM_PRICE_INPUT_PER_1M")
+    override_out = os.getenv("LLM_PRICE_OUTPUT_PER_1M")
+    if override_in and override_out:
+        try:
+            return float(override_in), float(override_out)
+        except ValueError:
+            pass
+    name = (model or "").lower()
+    # Longest match first so "gpt-4o-mini" doesn't resolve to "gpt-4o".
+    for key in sorted(_MODEL_PRICING_PER_1M, key=len, reverse=True):
+        if key in name:
+            return _MODEL_PRICING_PER_1M[key]
+    return _DEFAULT_PRICING
+
+
+def estimate_cost_usd(model: str, prompt_tokens: int, completion_tokens: int) -> float:
+    """Indicative USD cost of one call (see ``_MODEL_PRICING_PER_1M``)."""
+    price_in, price_out = _pricing_for(model)
+    return (prompt_tokens * price_in + completion_tokens * price_out) / 1_000_000
+
+
+def record_llm_success(
+    model: str, provider: str, prompt_tokens: int, completion_tokens: int, latency_ms: float
+) -> None:
+    """A completed LLM call: tokens, latency, and estimated cost."""
+    dims = {"model": model, "provider": provider}
+    cost = estimate_cost_usd(model, prompt_tokens, completion_tokens)
+    _llm_calls.add(1, {**dims, "outcome": "success"})
+    _llm_tokens.add(prompt_tokens, {**dims, "kind": "prompt"})
+    _llm_tokens.add(completion_tokens, {**dims, "kind": "completion"})
+    _llm_cost.add(cost, dims)
+    _llm_latency.record(latency_ms, {**dims, "outcome": "success"})
+    llm_usage.record(model, prompt_tokens, completion_tokens, latency_ms, cost_usd=cost)
+
+
+def record_llm_failure(
+    model: str,
+    provider: str,
+    latency_ms: float,
+    status_code: int | None = None,
+    error_type: str = "unknown",
+) -> None:
+    """A failed LLM call. ``status_code`` separates 429 throttling (capacity —
+    raise the deployment's TPM quota) from 5xx/timeouts (provider outage), which
+    need different responses and so deserve different alerts."""
+    dims = {
+        "model": model,
+        "provider": provider,
+        "error_type": error_type,
+        "status_code": str(status_code) if status_code is not None else "none",
+    }
+    _llm_calls.add(1, {**dims, "outcome": "error"})
+    _llm_latency.record(latency_ms, {"model": model, "provider": provider, "outcome": "error"})
+    llm_usage.record_error(model, error_type, status_code)
+
+
+def record_llm_fallback(model: str, provider: str, reason: str) -> None:
+    """A request answered by the deterministic stub instead of a model.
+
+    This is the platform's most important signal: on any provider error the LLM
+    adapter returns canned text rather than raising, so a compliance answer that
+    no model wrote is indistinguishable to the user. ``reason`` is
+    ``mock-fallback`` (provider failed) or ``mock`` (no provider configured) —
+    the first is an incident, the second is expected in local/CI runs.
+    """
+    _llm_calls.add(1, {"model": model, "provider": provider, "outcome": "fallback", "reason": reason})
+    llm_usage.record_fallback(reason)
+
+
+def record_guardrail(flags: Iterable[str]) -> None:
+    """DLP guardrail outcome for one query (prompt-injection / PII masking)."""
+    for flag in flags:
+        # PII flags carry the detected type ("pii_masked:email"); keep the type
+        # as its own dimension so the counter stays low-cardinality.
+        kind, _, detail = flag.partition(":")
+        _guardrail_events.add(1, {"flag": kind, "detail": detail or "none"})
+
+
+def record_copilot_outcome(outcome: str, citation_count: int, generation_mode: str = "unknown") -> None:
+    """One copilot answer: whether it answered, and how well-grounded it was.
+
+    Citation count is the production groundedness proxy — an "answered" outcome
+    with zero citations should never happen, and a falling mean means retrieval
+    has regressed even while every request still returns HTTP 200.
+    """
+    _copilot_answers.add(1, {"outcome": outcome, "generation_mode": generation_mode})
+    _copilot_citations.record(citation_count, {"outcome": outcome})
+
+
+def force_flush_metrics(timeout_millis: int = 5_000) -> bool:
+    """Push buffered metrics immediately (used by tests and shutdown)."""
+    try:
+        return _meter_provider.force_flush(timeout_millis=timeout_millis)
+    except Exception:
+        return False
+
+
 def instrument_fastapi(app: Any) -> None:
     """Record each incoming HTTP request as a **server** span.
 
@@ -107,7 +273,7 @@ def instrument_fastapi(app: Any) -> None:
         # polling endpoints — they're not requests worth recording and would
         # otherwise flood the trace store and the tracing UI.
         FastAPIInstrumentor.instrument_app(
-            app, tracer_provider=_provider, excluded_urls="health,static,favicon,/api/telemetry"
+            app, tracer_provider=_provider, excluded_urls="health,/ready,static,favicon,/api/telemetry"
         )
     except Exception:
         pass
@@ -269,37 +435,88 @@ def get_trace(trace_id: str) -> Dict[str, Any]:
 
 # ------------------------------------------------------------- LLM accounting
 class LLMUsage:
-    """Aggregate token usage/latency per model (cost visibility)."""
+    """Aggregate token usage/latency/errors per model (cost visibility).
+
+    In-process only: resets on restart and is per-replica, so it backs the local
+    telemetry page. Azure Monitor ``customMetrics`` is the cross-replica,
+    durable view — see the ``record_*`` helpers above.
+    """
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._by_model: Dict[str, Dict[str, Any]] = {}
+        self._fallbacks: Dict[str, int] = {}
 
-    def record(self, model: str, prompt_tokens: int, completion_tokens: int, latency_ms: float) -> None:
+    def _stats_for(self, model: str) -> Dict[str, Any]:
+        return self._by_model.setdefault(
+            model,
+            {
+                "calls": 0,
+                "errors": 0,
+                "prompt_tokens": 0,
+                "completion_tokens": 0,
+                "total_latency_ms": 0.0,
+                "cost_usd": 0.0,
+                "last_error": None,
+            },
+        )
+
+    def record(
+        self,
+        model: str,
+        prompt_tokens: int,
+        completion_tokens: int,
+        latency_ms: float,
+        cost_usd: float = 0.0,
+    ) -> None:
         with self._lock:
-            stats = self._by_model.setdefault(
-                model,
-                {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_latency_ms": 0.0},
-            )
+            stats = self._stats_for(model)
             stats["calls"] += 1
             stats["prompt_tokens"] += prompt_tokens
             stats["completion_tokens"] += completion_tokens
             stats["total_latency_ms"] += latency_ms
+            stats["cost_usd"] += cost_usd
+
+    def record_error(self, model: str, error_type: str, status_code: int | None = None) -> None:
+        with self._lock:
+            stats = self._stats_for(model)
+            stats["errors"] += 1
+            stats["last_error"] = f"{error_type}:{status_code}" if status_code else error_type
+
+    def record_fallback(self, reason: str) -> None:
+        with self._lock:
+            self._fallbacks[reason] = self._fallbacks.get(reason, 0) + 1
 
     def summary(self) -> Dict[str, Any]:
         with self._lock:
             models = {}
             for model, stats in self._by_model.items():
+                calls = stats["calls"]
+                attempts = calls + stats["errors"]
                 models[model] = {
                     **stats,
                     "total_latency_ms": round(stats["total_latency_ms"], 1),
-                    "avg_latency_ms": round(stats["total_latency_ms"] / stats["calls"], 1) if stats["calls"] else 0,
+                    "avg_latency_ms": round(stats["total_latency_ms"] / calls, 1) if calls else 0,
                     "total_tokens": stats["prompt_tokens"] + stats["completion_tokens"],
+                    "cost_usd": round(stats["cost_usd"], 4),
+                    "error_rate": round(stats["errors"] / attempts, 4) if attempts else 0.0,
                 }
+            fallbacks = dict(self._fallbacks)
+            total_calls = sum(s["calls"] for s in models.values())
+            total_errors = sum(s["errors"] for s in models.values())
+            degraded = fallbacks.get("mock-fallback", 0)
             return {
                 "models": models,
-                "total_calls": sum(s["calls"] for s in models.values()),
+                "total_calls": total_calls,
+                "total_errors": total_errors,
                 "total_tokens": sum(s["total_tokens"] for s in models.values()),
+                "total_cost_usd": round(sum(s["cost_usd"] for s in models.values()), 4),
+                "fallbacks": fallbacks,
+                # Share of answers served by the stub after a provider failure —
+                # the headline "are we silently degraded?" number.
+                "degraded_rate": round(degraded / (total_calls + total_errors + degraded), 4)
+                if (total_calls + total_errors + degraded)
+                else 0.0,
             }
 
 

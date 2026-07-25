@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 
 load_dotenv()  # .env holds LLM/Azure/Neo4j credentials (gitignored)
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel
@@ -16,6 +16,7 @@ from app.services.graph_store import GraphStore
 from app.services.azure_ad import get_current_user_from_header, validate_jwt
 from app.services.azure_config import get_azure_ad_settings
 from app.services.neo4j_store import Neo4jStore
+from app.services.llm_adapter import LLMAdapter
 import os
 from fastapi import Depends, Header
 from app.services.azure_ad import user_has_role
@@ -360,7 +361,73 @@ def auth_config() -> Dict[str, Any]:
 
 @app.get("/health")
 def health() -> Dict[str, str]:
+    """Liveness: is the process alive? Deliberately dependency-free.
+
+    A liveness probe that checked Neo4j or Azure OpenAI would restart every pod
+    during a dependency outage — turning a degradation into an outage. Dependency
+    checks belong in ``/ready``.
+    """
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready(response: Response) -> Dict[str, Any]:
+    """Readiness: can this replica actually serve requests?
+
+    Checks each dependency and distinguishes two states, because they warrant
+    different responses:
+
+    - **not ready** (HTTP 503) — the graph store is unreachable, so nothing can
+      be served. Kubernetes pulls the pod out of the load-balancer rotation.
+    - **degraded** (HTTP 200) — the LLM provider isn't configured, so answers
+      come from the deterministic stub. The pod still serves, so it stays in
+      rotation, but the flag is what an Azure Monitor availability test alerts on.
+
+    The LLM check is configuration-only on purpose: probes run every 10s, and
+    issuing a real completion on each one would burn tokens and quota.
+    """
+    checks: Dict[str, Dict[str, Any]] = {}
+
+    if isinstance(store, Neo4jStore):
+        try:
+            store.driver.verify_connectivity()
+            checks["graph_store"] = {"ok": True, "kind": "neo4j"}
+        except Exception as exc:
+            checks["graph_store"] = {"ok": False, "kind": "neo4j", "error": str(exc)[:200]}
+    else:
+        # In-memory store: always available, but flag that it isn't shared across
+        # replicas so a "why did state vanish?" question is answerable from here.
+        checks["graph_store"] = {"ok": True, "kind": "in-memory", "shared": False}
+
+    provider = LLMAdapter().provider
+    checks["llm"] = {"ok": provider != "mock", "provider": provider}
+
+    from app.services.azure_search_store import azure_search_configured
+
+    checks["vector_store"] = {
+        "ok": True,
+        "kind": "azure-search" if azure_search_configured() else "in-memory",
+    }
+
+    from app.services.telemetry import langsmith_enabled
+
+    checks["telemetry"] = {
+        "ok": True,
+        "azure_monitor": bool(os.getenv("APPLICATIONINSIGHTS_CONNECTION_STRING")),
+        "langsmith": langsmith_enabled(),
+    }
+
+    # Only the graph store is required to serve; a stubbed LLM is degraded, not down.
+    ready_ok = checks["graph_store"]["ok"]
+    degraded = [name for name, check in checks.items() if not check["ok"]]
+    if not ready_ok:
+        response.status_code = 503
+
+    return {
+        "status": "ready" if ready_ok else "not_ready",
+        "degraded": degraded,
+        "checks": checks,
+    }
 
 
 @app.post("/api/agents/inspect", response_model=InspectResponse)
