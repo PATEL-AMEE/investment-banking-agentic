@@ -18,6 +18,12 @@
 #
 set -euo pipefail
 
+# Git Bash / MSYS rewrites arguments that look like Unix paths into Windows
+# paths, which corrupts Azure resource ids (/subscriptions/... arrives as
+# C:/Program Files/Git/subscriptions/...). Unused on Linux and in CI.
+export MSYS_NO_PATHCONV=1
+export MSYS2_ARG_CONV_EXCL="*"
+
 RESOURCE_GROUP="${RESOURCE_GROUP:-rg-investment-banking-agentic}"
 APP_INSIGHTS_NAME="${APP_INSIGHTS_NAME:-appi-investment-banking}"
 ACTION_GROUP_NAME="${ACTION_GROUP_NAME:-ag-agentic-oncall}"
@@ -52,16 +58,21 @@ ACTION_GROUP_ID="$(az monitor action-group show \
   --query id -o tsv)"
 
 # ---------------------------------------------------------------------------
-# create_log_alert <name> <severity> <evaluation-window> <description> <kql>
+# create_log_alert <name> <severity> <window> <frequency> <description> <kql>
 #
 # Severity: 0=critical, 1=error, 2=warning, 3=informational.
 # Each rule fires when the query returns any row, so the KQL itself encodes the
 # threshold. Log alerts (not metric alerts) are used where the condition needs a
 # ratio or a dimension filter that a single metric can't express.
+#
+# Window and frequency are separate because they answer different questions:
+# the window is how much history the condition looks at, the frequency is how
+# often it is checked. Azure also rejects stateful rules evaluated less often
+# than every 12h, so a daily budget window must still be checked hourly.
 # ---------------------------------------------------------------------------
 create_log_alert() {
-  local name="$1" severity="$2" window="$3" description="$4" query="$5"
-  echo "==> Alert rule: $name (sev$severity)"
+  local name="$1" severity="$2" window="$3" frequency="$4" description="$5" query="$6"
+  echo "==> Alert rule: $name (sev$severity, ${window} window / ${frequency} check)"
   az monitor scheduled-query create \
     --resource-group "$RESOURCE_GROUP" \
     --name "$name" \
@@ -69,7 +80,7 @@ create_log_alert() {
     --description "$description" \
     --severity "$severity" \
     --window-size "$window" \
-    --evaluation-frequency "$window" \
+    --evaluation-frequency "$frequency" \
     --condition "count 'placeholder' > 0" \
     --condition-query placeholder="$query" \
     --action-groups "$ACTION_GROUP_ID" \
@@ -79,7 +90,7 @@ create_log_alert() {
 # 1. Silent degradation — answers served by the deterministic stub after a
 #    provider failure. The highest-severity signal on the platform: users get a
 #    plausible compliance answer that no model wrote.
-create_log_alert "agentic-llm-degraded" 0 "PT5M" \
+create_log_alert "agentic-llm-degraded" 0 "PT5M" "PT5M" \
   "Compliance answers are being served by the fallback stub instead of the model." \
   'customMetrics
 | where name == "llm.calls"
@@ -92,7 +103,7 @@ create_log_alert "agentic-llm-degraded" 0 "PT5M" \
 # 2. Provider errors, split by cause. 429 means the deployment is out of quota
 #    (raise TPM); 5xx/timeouts mean a provider incident. Different fixes, so
 #    they are separate rules rather than one "LLM is unhealthy" alert.
-create_log_alert "agentic-llm-throttled-429" 1 "PT15M" \
+create_log_alert "agentic-llm-throttled-429" 1 "PT15M" "PT15M" \
   "Azure OpenAI is throttling requests (429) - the deployment needs more TPM quota." \
   'customMetrics
 | where name == "llm.calls"
@@ -101,7 +112,7 @@ create_log_alert "agentic-llm-throttled-429" 1 "PT15M" \
 | summarize throttled = sum(valueSum)
 | where throttled > 10'
 
-create_log_alert "agentic-llm-error-rate" 1 "PT15M" \
+create_log_alert "agentic-llm-error-rate" 1 "PT15M" "PT15M" \
   "More than 10% of LLM calls are failing (provider outage or misconfiguration)." \
   'customMetrics
 | where name == "llm.calls"
@@ -111,7 +122,7 @@ create_log_alert "agentic-llm-error-rate" 1 "PT15M" \
 
 # 3. Latency. p95 rather than mean, because the mean stays healthy while a
 #    fraction of requests walk into the adapter's 45s timeout.
-create_log_alert "agentic-llm-latency-p95" 2 "PT15M" \
+create_log_alert "agentic-llm-latency-p95" 2 "PT15M" "PT15M" \
   "LLM p95 latency above 15s - requests are approaching the 45s adapter timeout." \
   'dependencies
 | where name == "llm.chat"
@@ -120,7 +131,7 @@ create_log_alert "agentic-llm-latency-p95" 2 "PT15M" \
 
 # 4. Cost. Catches a prompt-size regression or a runaway retry loop before the
 #    invoice does.
-create_log_alert "agentic-llm-daily-cost" 2 "P1D" \
+create_log_alert "agentic-llm-daily-cost" 2 "P1D" "PT1H" \
   "Estimated LLM spend exceeded the daily budget." \
   "customMetrics
 | where name == \"llm.cost_usd\"
@@ -130,7 +141,7 @@ create_log_alert "agentic-llm-daily-cost" 2 "P1D" \
 # 5. Retrieval quality. Every request still returns HTTP 200 when retrieval
 #    breaks, so grounding has to be watched directly: an "answered" outcome with
 #    no citations means the model was asked to answer with nothing to cite.
-create_log_alert "agentic-ungrounded-answers" 1 "PT30M" \
+create_log_alert "agentic-ungrounded-answers" 1 "PT30M" "PT30M" \
   "Copilot answered without citations - retrieval or the corpus index is broken." \
   'customMetrics
 | where name == "copilot.citations"
@@ -141,7 +152,7 @@ create_log_alert "agentic-ungrounded-answers" 1 "PT30M" \
 
 # 6. Refusal spike. A jump in out-of-scope refusals usually means retrieval
 #    stopped matching, not that users changed what they ask.
-create_log_alert "agentic-refusal-spike" 2 "PT30M" \
+create_log_alert "agentic-refusal-spike" 2 "PT30M" "PT30M" \
   "Over half of copilot queries are being refused as out-of-scope." \
   'customMetrics
 | where name == "copilot.answers"
@@ -151,7 +162,7 @@ create_log_alert "agentic-refusal-spike" 2 "PT30M" \
 
 # 7. Prompt-injection attempts. Audit-relevant: a sustained rise is either an
 #    attack or a guardrail false-positive regression, and both need a human.
-create_log_alert "agentic-injection-attempts" 2 "PT15M" \
+create_log_alert "agentic-injection-attempts" 2 "PT15M" "PT15M" \
   "Elevated prompt-injection attempts against the copilot." \
   'customMetrics
 | where name == "guardrail.events"
@@ -162,7 +173,7 @@ create_log_alert "agentic-injection-attempts" 2 "PT15M" \
 
 # 8. Dependency health. /ready returns 503 when the graph store is unreachable;
 #    a failing readiness probe across replicas means the platform is down.
-create_log_alert "agentic-graph-store-down" 0 "PT5M" \
+create_log_alert "agentic-graph-store-down" 0 "PT5M" "PT5M" \
   "The Neo4j graph store is unreachable - /ready is failing." \
   'requests
 | where url endswith "/ready" and resultCode == "503"
