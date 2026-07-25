@@ -389,7 +389,7 @@ def run_supervisor(
     text: str | None = None,
     request_id: str | None = None,
 ) -> Dict[str, Any]:
-    from app.services.telemetry import current_trace_id, span
+    from app.services.telemetry import current_trace_id, langgraph_config, span
 
     request_id = request_id or f"SUP-{uuid.uuid4().hex[:8]}"
     with span("agent.supervisor", request_id=request_id, user_id=user_id):
@@ -407,7 +407,10 @@ def run_supervisor(
                 "jurisdiction": jurisdiction,
                 "text": text,
                 "request_id": request_id,
-            }
+            },
+            # Correlate the LangSmith agent-graph trace with the Azure Monitor
+            # trace via shared ids (no-op when LangSmith is disabled).
+            config=langgraph_config("supervisor", request_id=request_id, trace_id=trace_id, user_id=user_id),
         )
     result = final_state["result"]
     if isinstance(result, dict):

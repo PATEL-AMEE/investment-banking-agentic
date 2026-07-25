@@ -102,10 +102,24 @@ GET  /api/telemetry/trace/8e06f7c6...
   `APPLICATIONINSIGHTS_CONNECTION_STRING`; `telemetry.py` attaches the
   `AzureMonitorTraceExporter` automatically (Phase 2). Local runs stay
   in-memory; set `OTEL_CONSOLE=true` to also print spans.
-- **LangSmith** (agent-graph tracing, Phase 5): set `LANGCHAIN_TRACING_V2=true`,
-  `LANGCHAIN_API_KEY=<key>`, and `LANGCHAIN_PROJECT=ib-agentic`. LangChain/
-  LangGraph then export the node/edge execution trace to LangSmith with no code
-  change.
+- **LangSmith** (agent-graph tracing, Phase 5): set `LANGSMITH_TRACING=true` +
+  `LANGSMITH_API_KEY=<key>` (+ `LANGSMITH_PROJECT=ib-agentic`). LangGraph then
+  exports the node/edge execution path — which agent ran, what it decided, tool
+  calls, and state changes — to LangSmith automatically. Off by default.
+  - **Correlation.** Each graph run is tagged (`run_name` + `metadata`) with the
+    request's `request_id` and `trace_id` (`telemetry.langgraph_config`), so a
+    LangSmith agent trace and its Azure Monitor infrastructure trace share one
+    id — pivot from a slow request in Azure to the exact agent path in LangSmith.
+  - **Data residency (bank).** LangSmith's default is a managed third-party
+    cloud; trace context can indirectly carry client-related data, so for
+    Barclays run **self-hosted / BYOC** inside your own Azure and point
+    `LANGSMITH_ENDPOINT` at it — trace data never leaves the bank. This is an
+    Enterprise-tier deployment; confirm licensing at architecture review. It is
+    also a **closed/proprietary** platform (vs. open OpenTelemetry) — record it
+    as a vendor dependency.
+- **The split.** LangSmith = the **agent-reasoning** layer (which agent ran and
+  why). Azure Monitor = the **infrastructure** layer (latency, dependency
+  health, uptime across AKS/Kafka). They complement, not duplicate; use both.
 - **Latency alerts**: in Azure Monitor, alert per step (e.g. GraphRAG traversal
   over a threshold) so degradation is caught before it affects analysts.
 

@@ -122,6 +122,26 @@ def recent_spans(limit: int = 100) -> List[Dict[str, Any]]:
     return _ring.recent(limit)
 
 
+def langsmith_enabled() -> bool:
+    """Whether LangSmith agent-graph tracing is switched on (env-gated, off by
+    default). Enable with ``LANGSMITH_TRACING=true`` + ``LANGSMITH_API_KEY``;
+    point ``LANGSMITH_ENDPOINT`` at a self-hosted/BYOC instance so trace data
+    stays inside the bank's own environment. LangGraph exports automatically —
+    this flag is only for reporting/labelling."""
+    return os.getenv("LANGSMITH_TRACING", os.getenv("LANGCHAIN_TRACING_V2", "")).lower() == "true"
+
+
+def langgraph_config(run_name: str, **metadata: Any) -> Dict[str, Any]:
+    """Config for a LangGraph ``.invoke()`` that names the run and attaches the
+    request's ids as LangSmith metadata/tags. This makes the agent-graph trace
+    in LangSmith carry the *same* ``request_id``/``trace_id`` as the Azure
+    Monitor infrastructure trace, so one can be pivoted to the other. Harmless
+    when LangSmith is disabled — the metadata is simply never exported.
+    """
+    meta = {key: value for key, value in metadata.items() if value is not None}
+    return {"run_name": run_name, "tags": ["ib-agentic", run_name], "metadata": meta}
+
+
 def current_trace_id() -> str | None:
     """The active request's trace id (32-hex), or ``None`` outside any span.
 

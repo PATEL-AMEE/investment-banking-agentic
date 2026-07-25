@@ -148,8 +148,11 @@ def get_copilot_agent():
 
 
 def run_copilot(query: str, store: Any) -> Dict[str, Any]:
-    from app.services.telemetry import span
+    from app.services.telemetry import current_trace_id, langgraph_config, span
 
     with span("agent.copilot"):
-        final_state = get_copilot_agent().invoke({"query": query, "store": store})
+        final_state = get_copilot_agent().invoke(
+            {"query": query, "store": store},
+            config=langgraph_config("copilot", trace_id=current_trace_id()),
+        )
     return final_state["result"]
