@@ -103,7 +103,12 @@ def instrument_fastapi(app: Any) -> None:
     try:
         from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 
-        FastAPIInstrumentor.instrument_app(app, tracer_provider=_provider, excluded_urls="health")
+        # Don't trace health probes, static assets, favicon, or the telemetry
+        # polling endpoints — they're not requests worth recording and would
+        # otherwise flood the trace store and the tracing UI.
+        FastAPIInstrumentor.instrument_app(
+            app, tracer_provider=_provider, excluded_urls="health,static,favicon,/api/telemetry"
+        )
     except Exception:
         pass
 
@@ -153,6 +158,11 @@ def current_trace_id() -> str | None:
     return format(ctx.trace_id, "032x") if ctx.is_valid else None
 
 
+# Span-name prefixes that mark a trace as real agent-pipeline work (vs. a bare
+# static/page/health HTTP request). Used to keep the tracing UI meaningful.
+_PIPELINE_PREFIXES = ("agent.", "mcp.", "llm.", "nlp.", "tool.")
+
+
 def _root_of(spans: List[Dict[str, Any]]) -> Dict[str, Any]:
     """The trace root: the parentless span, else the earliest-started one."""
     parentless = [s for s in spans if s["parent_id"] is None]
@@ -172,6 +182,11 @@ def list_traces(limit: int = 25) -> List[Dict[str, Any]]:
 
     traces: List[Dict[str, Any]] = []
     for trace_id, spans in by_trace.items():
+        # Only surface traces that actually exercised the agent pipeline —
+        # skip static-asset serves, page loads, and telemetry polling, which
+        # are HTTP-only noise in this "recent requests" view.
+        if not any(s["name"].startswith(_PIPELINE_PREFIXES) for s in spans):
+            continue
         root = _root_of(spans)
         starts = [s["start_ns"] for s in spans if s.get("start_ns") is not None]
         ends = [s["end_ns"] for s in spans if s.get("end_ns") is not None]
