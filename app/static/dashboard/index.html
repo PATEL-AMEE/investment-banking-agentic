@@ -51,7 +51,6 @@
     <header class="topbar">
       <div>
         <h1>Dashboard</h1>
-        <p class="sub">Real output from your running app · compliance workflows</p>
       </div>
       <div class="actions">
         <span class="badge live"><span class="dot"></span>Live</span>
@@ -62,8 +61,6 @@
     </header>
 
     <div class="content">
-      <div class="meta" id="meta">Loading live data…</div>
-
       <div class="eyebrow">Platform state</div>
       <div class="kpis" id="kpis"></div>
 
@@ -138,12 +135,10 @@ $('#theme').onclick = () => {
 };
 
 async function load() {
-  $('#meta').textContent = 'Refreshing…';
   let d;
   try { d = await (await fetch('/api/dashboard/summary')).json(); }
-  catch (e) { $('#meta').textContent = 'Could not reach /api/dashboard/summary — is the app running?'; return; }
+  catch (e) { console.error('Could not reach /api/dashboard/summary — is the app running?'); return; }
 
-  $('#meta').textContent = `source: ${d.data_source}  ·  generated ${d.generated_at}`;
   const c = d.counts || {};
   const kpi = [
     ['Clients', c.ClientProfile||0, 'profiles loaded'],

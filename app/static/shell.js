@@ -14,8 +14,6 @@
     { href: "/dashboard", key: "dashboard", label: "Dashboard" },
     { href: "/chat", key: "chat", label: "Copilot chat" },
     { href: "/reviewer", key: "reviewer", label: "Review queue" },
-    { section: "Observability" },
-    { href: "/telemetry", key: "telemetry", label: "Tracing" },
   ];
   let html =
     '<div class="brand"><span class="mark" aria-hidden="true">' +
