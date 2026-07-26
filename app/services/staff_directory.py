@@ -27,7 +27,7 @@ _DIRECTORY: Dict[str, StaffMember] = {
     "aisha.khan@bank-demo.example": {"name": "Aisha Khan", "email": "aisha.khan@bank-demo.example", "role": "compliance_analyst"},
     "tom.reed@bank-demo.example": {"name": "Tom Reed", "email": "tom.reed@bank-demo.example", "role": "onboarding_officer"},
     "priya.shah@bank-demo.example": {"name": "Priya Shah", "email": "priya.shah@bank-demo.example", "role": "risk_manager"},
-    "david.cole@bank-demo.example": {"name": "David Cole", "email": "david.cole@bank-demo.example", "role": "executive"},
+    "dev.cole@bank-demo.example": {"name": "Dev Cole", "email": "dev.cole@bank-demo.example", "role": "executive"},
 }
 
 
