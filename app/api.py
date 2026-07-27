@@ -623,7 +623,7 @@ def mcp_endpoint(request: Dict[str, Any], current_user: dict = Depends(require_m
 
 
 @app.post("/api/eval/run")
-def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
+def run_eval(engine: Optional[str] = None, current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
     """Run the RAGAS-style evaluation harness over the golden Q&A dataset.
 
     Scores faithfulness, hallucination rate, answer relevancy, and context
@@ -635,7 +635,10 @@ def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
         dataset = load_golden_dataset(BASE_DIR.parent / "data" / "eval" / "golden_qa.json")
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail="golden dataset not found") from exc
-    report = run_evaluation(dataset, store)
+    # ``engine`` = lexical (default, fast/free) or llm (LLM-as-judge). Anything
+    # else falls back to the configured default inside the harness.
+    chosen_engine = engine if engine in ("lexical", "llm", "ragas") else None
+    report = run_evaluation(dataset, store, engine=chosen_engine)
     # Fold in the Phase 6.6 feedback loop: questions staff flagged as wrong are
     # re-scored here so a human-spotted failure keeps being measured until fixed.
     report["feedback_regression"] = run_feedback_regression(store)
@@ -654,6 +657,19 @@ def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
                 "aggregate": report["aggregate"],
                 "graph_rag_delta": report.get("ablation", {}).get("graph_rag_delta"),
             })
+            # Append a compact point to the bounded run history (for the trend).
+            try:
+                history = store.kv_get("Eval", "history") or []
+            except Exception:
+                history = []
+            history.append({
+                "generated_at": report["generated_at"],
+                "engine": report.get("engine", "lexical"),
+                "faithfulness": report["aggregate"]["faithfulness"],
+                "hallucination_rate": report["aggregate"]["hallucination_rate"],
+                "answer_relevancy": report["aggregate"]["answer_relevancy"],
+            })
+            store.kv_put("Eval", "history", history[-20:])
     except Exception:
         pass
     audit_log.record(
@@ -677,14 +693,16 @@ def eval_summary() -> Dict[str, Any]:
     shared KV). ``available: false`` until the harness has been run once.
     """
     latest = None
+    history = []
     try:
         if hasattr(store, "kv_get"):
             latest = store.kv_get("Eval", "latest")
+            history = store.kv_get("Eval", "history") or []
     except Exception:
         latest = None
     if not latest:
         return {"available": False}
-    return {"available": True, **latest}
+    return {"available": True, "history": history, **latest}
 
 
 @app.get("/api/mcp/tools")

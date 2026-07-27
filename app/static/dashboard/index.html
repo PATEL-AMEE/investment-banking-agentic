@@ -107,9 +107,16 @@
             <h3>AI quality — RAGAS-style evaluation</h3>
             <p class="cap">Faithfulness, hallucination, answer relevancy &amp; retrieval quality on the golden Q&amp;A set · <span id="evalMeta">loading…</span></p>
           </div>
-          <button class="btn pri" id="runEval" type="button">Run evaluation</button>
+          <div style="display:flex;align-items:center;gap:10px">
+            <select id="evalEngine" title="Scoring engine" style="font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--hair);border-radius:9px;background:var(--surface);color:var(--ink)">
+              <option value="lexical">Lexical (fast)</option>
+              <option value="llm">LLM judge</option>
+            </select>
+            <button class="btn pri" id="runEval" type="button">Run evaluation</button>
+          </div>
         </div>
         <div class="kpis" id="evalTiles" style="grid-template-columns:repeat(5,1fr);margin-top:14px"></div>
+        <div id="evalTrend" style="margin-top:14px"></div>
         <p class="cap" id="evalNote" style="margin-top:10px"></p>
       </div>
 
@@ -229,12 +236,31 @@ async function loadEval(){
   tiles.innerHTML = items.map(([l,v,c])=>`<div class="tile"><div class="label">${l}</div><div class="value num" style="color:${c}">${pct(v)}</div></div>`).join('');
   const d = e.graph_rag_delta;
   note.textContent = d ? `GraphRAG vs vector RAG on retrieval: recall ${signed(d.context_recall)}, precision ${signed(d.context_precision)}.` : '';
+  renderTrend(e.history || []);
+}
+
+function renderTrend(history){
+  const el = $('#evalTrend');
+  if (!history || history.length < 2){ el.innerHTML = ''; return; }
+  const vals = history.map(h => h.faithfulness);
+  const w = 280, h = 46, pad = 5;
+  const pt = (v,i) => [pad + (w-2*pad)*(i/(vals.length-1)), pad + (h-2*pad)*(1-v)];
+  const line = vals.map((v,i)=>pt(v,i).map(n=>n.toFixed(1)).join(',')).join(' ');
+  const dots = vals.map((v,i)=>{const[x,y]=pt(v,i);return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.6" fill="var(--accent)"/>`;}).join('');
+  el.innerHTML =
+    `<div class="cap" style="margin-bottom:5px">Faithfulness over last ${vals.length} runs · latest ${pct(vals[vals.length-1])}</div>`+
+    `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Faithfulness trend">`+
+    `<line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--grid)" stroke-width="1"/>`+
+    `<polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`+
+    dots + `</svg>`;
 }
 
 $('#runEval').onclick = async () => {
-  const b = $('#runEval'); b.disabled = true; const label = b.textContent; b.textContent = 'Running…';
+  const b = $('#runEval'); b.disabled = true; const label = b.textContent;
+  const eng = $('#evalEngine').value;
+  b.textContent = eng === 'llm' ? 'Judging…' : 'Running…';
   try {
-    const r = await fetch('/api/eval/run', { method:'POST', headers: authHeader() });
+    const r = await fetch('/api/eval/run?engine=' + encodeURIComponent(eng), { method:'POST', headers: authHeader() });
     if (r.status === 403) { $('#evalNote').textContent = 'Your role can’t run the evaluation (needs Risk Manager or Compliance Analyst). Showing the last stored result.'; }
     else if (!r.ok) { throw new Error('HTTP ' + r.status); }
     await loadEval();

@@ -137,10 +137,10 @@ def _llm_judge(question: str, answer: str, contexts: List[str]) -> tuple[float, 
     return round(faith, 4), round(relevancy, 4)
 
 
-def _score_answer(question: str, answer: str, contexts: List[str]) -> tuple[float, float]:
-    """faithfulness, answer_relevancy under the active engine (LLM judge with a
-    deterministic-proxy fallback)."""
-    if eval_engine() in ("llm", "ragas"):
+def _score_answer(question: str, answer: str, contexts: List[str], engine: str | None = None) -> tuple[float, float]:
+    """faithfulness, answer_relevancy under the chosen engine (LLM judge with a
+    deterministic-proxy fallback). ``engine`` defaults to ``EVAL_ENGINE``."""
+    if (engine or eval_engine()) in ("llm", "ragas"):
         try:
             return _llm_judge(question, answer, contexts)
         except Exception:  # provider down / unparseable — never fail the eval
@@ -149,7 +149,7 @@ def _score_answer(question: str, answer: str, contexts: List[str]) -> tuple[floa
 
 
 # ------------------------------------------------------------------- runner
-def evaluate_case(case: Dict[str, Any], store: Any) -> Dict[str, Any]:
+def evaluate_case(case: Dict[str, Any], store: Any, engine: str | None = None) -> Dict[str, Any]:
     """Run one golden Q&A case through the copilot chain and score it."""
     from app.agents.copilot import run_copilot
 
@@ -159,7 +159,7 @@ def evaluate_case(case: Dict[str, Any], store: Any) -> Dict[str, Any]:
     retrieved_ids = [c.get("source_id", "") for c in citations]
     contexts = [c.get("excerpt", "") for c in citations]
 
-    faith, relevancy = _score_answer(case["question"], answer, contexts)
+    faith, relevancy = _score_answer(case["question"], answer, contexts, engine)
     return {
         "case_id": case.get("case_id"),
         "question": case["question"],
@@ -175,12 +175,16 @@ def evaluate_case(case: Dict[str, Any], store: Any) -> Dict[str, Any]:
     }
 
 
-def run_evaluation(dataset: List[Dict[str, Any]], store: Any) -> Dict[str, Any]:
-    """Evaluate every case; return per-case results plus aggregate means."""
+def run_evaluation(dataset: List[Dict[str, Any]], store: Any, engine: str | None = None) -> Dict[str, Any]:
+    """Evaluate every case; return per-case results plus aggregate means.
+
+    ``engine`` (``lexical`` | ``llm``) overrides ``EVAL_ENGINE`` for this run.
+    """
     from app.services.telemetry import span
 
+    engine = (engine or eval_engine()).strip().lower()
     with span("eval.run", cases=len(dataset)):
-        cases = [evaluate_case(case, store) for case in dataset]
+        cases = [evaluate_case(case, store, engine) for case in dataset]
     metric_names = ["faithfulness", "hallucination_rate", "answer_relevancy", "context_precision", "context_recall"]
     aggregate = {
         name: round(sum(c["metrics"][name] for c in cases) / len(cases), 4) if cases else 0.0
@@ -188,7 +192,7 @@ def run_evaluation(dataset: List[Dict[str, Any]], store: Any) -> Dict[str, Any]:
     }
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
-        "engine": eval_engine(),
+        "engine": engine,
         "case_count": len(cases),
         "aggregate": aggregate,
         "cases": cases,
