@@ -642,6 +642,20 @@ def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
     # A/B the two retrieval chains (deterministic) so the report shows what the
     # graph hop adds over plain vector RAG (recovers graph-connected sources).
     report["ablation"] = run_ablation(dataset, store)
+    # Persist the aggregate to the shared store so the dashboard's AI-quality
+    # panel can show the latest scores without re-running the (LLM-driven) eval
+    # on every page load. Survives restarts and is shared across replicas.
+    try:
+        if hasattr(store, "kv_put"):
+            store.kv_put("Eval", "latest", {
+                "generated_at": report["generated_at"],
+                "engine": report.get("engine", "lexical"),
+                "case_count": report["case_count"],
+                "aggregate": report["aggregate"],
+                "graph_rag_delta": report.get("ablation", {}).get("graph_rag_delta"),
+            })
+    except Exception:
+        pass
     audit_log.record(
         event_type="rag_evaluation",
         actor_id=str(current_user.get("sub", "local-user")),
@@ -653,6 +667,24 @@ def run_eval(current_user: dict = Depends(require_eval_run)) -> Dict[str, Any]:
         },
     )
     return report
+
+
+@app.get("/api/eval/summary")
+def eval_summary() -> Dict[str, Any]:
+    """Latest RAGAS-style evaluation aggregate for the dashboard (read-only).
+
+    Returns the scores from the most recent ``/api/eval/run`` (stored in the
+    shared KV). ``available: false`` until the harness has been run once.
+    """
+    latest = None
+    try:
+        if hasattr(store, "kv_get"):
+            latest = store.kv_get("Eval", "latest")
+    except Exception:
+        latest = None
+    if not latest:
+        return {"available": False}
+    return {"available": True, **latest}
 
 
 @app.get("/api/mcp/tools")
