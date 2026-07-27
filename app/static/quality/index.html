@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compliance Platform — AI Quality</title>
+<link rel="stylesheet" href="/static/app.css">
+<style>
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+  .tile{position:relative;background:var(--surface);border:1px solid var(--hair);border-radius:var(--radius);padding:16px 16px 15px;box-shadow:var(--shadow);overflow:hidden}
+  .tile::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:linear-gradient(90deg,var(--accent),color-mix(in srgb,var(--accent) 20%,transparent));opacity:.85}
+  .tile .label{font-size:11.5px;font-weight:600;letter-spacing:.02em;color:var(--ink-2);text-transform:uppercase}
+  .tile .value{font-size:clamp(22px,2.4vw,30px);font-weight:750;letter-spacing:-.03em;margin-top:9px;color:var(--ink)}
+  .toolbar{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  select#evalEngine{font:inherit;font-size:13px;padding:8px 10px;border:1px solid var(--hair);border-radius:9px;background:var(--surface);color:var(--ink)}
+  .defs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px 26px}
+  .defs .d{font-size:13px;padding:9px 0;border-bottom:1px solid var(--grid)}
+  .defs .d b{color:var(--ink)}
+  .defs .d span{color:var(--ink-2)}
+  @media (max-width:1000px){.kpis{grid-template-columns:repeat(2,1fr)}.defs{grid-template-columns:1fr}}
+</style>
+<script src="/static/auth.js"></script>
+</head>
+<body data-page="quality">
+<div class="app">
+  <aside class="sidebar" id="appSidebar"></aside>
+  <main class="main">
+    <header class="topbar">
+      <div><h1>AI Quality</h1></div>
+      <div class="actions">
+        <span class="badge live"><span class="dot"></span>Live</span>
+        <span id="authslot"></span>
+        <button class="btn icon" id="refresh" type="button" title="Refresh">↻</button>
+        <button class="btn icon" id="theme" type="button" title="Toggle theme">◐</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="eyebrow">RAGAS-style evaluation</div>
+      <div class="card">
+        <div class="toolbar">
+          <div>
+            <h3>Copilot answer quality on the golden Q&amp;A set</h3>
+            <p class="cap">Faithfulness, hallucination, answer relevancy &amp; retrieval quality · <span id="evalMeta">loading…</span></p>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <select id="evalEngine" title="Scoring engine">
+              <option value="lexical">Lexical (fast)</option>
+              <option value="llm">LLM judge</option>
+            </select>
+            <button class="btn pri" id="runEval" type="button">Run evaluation</button>
+          </div>
+        </div>
+        <div class="kpis" id="evalTiles" style="margin-top:16px"></div>
+        <div id="evalTrend" style="margin-top:16px"></div>
+        <p class="cap" id="evalNote" style="margin-top:10px"></p>
+      </div>
+
+      <div class="eyebrow">What these mean</div>
+      <div class="card">
+        <div class="defs">
+          <div class="d"><b>Faithfulness</b> — <span>how much of the answer is supported by the retrieved sources. Higher is better.</span></div>
+          <div class="d"><b>Hallucination</b> — <span>1 − faithfulness: the share of the answer not grounded in sources. Lower is better.</span></div>
+          <div class="d"><b>Answer relevancy</b> — <span>how directly the answer addresses the question.</span></div>
+          <div class="d"><b>Context precision</b> — <span>of the sources retrieved, how many were the expected ones.</span></div>
+          <div class="d"><b>Context recall</b> — <span>of the expected sources, how many were retrieved.</span></div>
+          <div class="d"><b>Engines</b> — <span><b>Lexical</b> is fast &amp; free (token overlap); <b>LLM judge</b> uses Azure OpenAI for entailment-based scoring.</span></div>
+        </div>
+      </div>
+
+      <footer id="footer">Scored against <span class="idc">data/eval/golden_qa.json</span> · results stored in the shared graph store.</footer>
+    </div>
+  </main>
+</div>
+
+<script src="/static/shell.js"></script>
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function authHeader(){ const t=sessionStorage.getItem('ib_token'); return t?{'Authorization':'Bearer '+t}:{}; }
+const pct = v => v==null ? '–' : (v*100).toFixed(0)+'%';
+const signed = v => (v>=0?'+':'') + (v*100).toFixed(0)+'%';
+
+$('#theme').onclick = () => {
+  const r = document.documentElement, cur = r.getAttribute('data-theme');
+  const dark = matchMedia('(prefers-color-scheme:dark)').matches;
+  r.setAttribute('data-theme', cur==='dark'?'light':cur==='light'?'dark':(dark?'light':'dark'));
+};
+
+async function loadEval(){
+  let e; try { e = await (await fetch('/api/eval/summary')).json(); } catch(_) { $('#evalMeta').textContent='could not reach the eval service'; return; }
+  const tiles = $('#evalTiles'), meta = $('#evalMeta'), note = $('#evalNote');
+  if (!e.available){
+    meta.textContent = 'not yet evaluated';
+    tiles.innerHTML = '';
+    note.textContent = 'Click “Run evaluation” to score the copilot against the golden Q&A set.';
+    return;
+  }
+  const a = e.aggregate || {};
+  meta.textContent = `engine: ${esc(e.engine)} · ${e.case_count} cases · ${new Date(e.generated_at).toLocaleString()}`;
+  const items = [
+    ['Faithfulness', a.faithfulness, 'var(--good)'],
+    ['Hallucination', a.hallucination_rate, 'var(--critical)'],
+    ['Answer relevancy', a.answer_relevancy, 'var(--good)'],
+    ['Context precision', a.context_precision, 'var(--warning)'],
+    ['Context recall', a.context_recall, 'var(--good)'],
+  ];
+  tiles.innerHTML = items.map(([l,v,c])=>`<div class="tile"><div class="label">${l}</div><div class="value num" style="color:${c}">${pct(v)}</div></div>`).join('');
+  const d = e.graph_rag_delta;
+  note.textContent = d ? `GraphRAG vs vector RAG on retrieval: recall ${signed(d.context_recall)}, precision ${signed(d.context_precision)}.` : '';
+  renderTrend(e.history || []);
+}
+
+function renderTrend(history){
+  const el = $('#evalTrend');
+  if (!history || history.length < 2){ el.innerHTML = ''; return; }
+  const vals = history.map(h => h.faithfulness);
+  const w = 320, h = 52, pad = 6;
+  const pt = (v,i) => [pad + (w-2*pad)*(i/(vals.length-1)), pad + (h-2*pad)*(1-v)];
+  const line = vals.map((v,i)=>pt(v,i).map(n=>n.toFixed(1)).join(',')).join(' ');
+  const dots = vals.map((v,i)=>{const[x,y]=pt(v,i);return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8" fill="var(--accent)"/>`;}).join('');
+  el.innerHTML =
+    `<div class="cap" style="margin-bottom:5px">Faithfulness over last ${vals.length} runs · latest ${pct(vals[vals.length-1])}</div>`+
+    `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" role="img" aria-label="Faithfulness trend">`+
+    `<line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="var(--grid)" stroke-width="1"/>`+
+    `<polyline points="${line}" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`+
+    dots + `</svg>`;
+}
+
+$('#runEval').onclick = async () => {
+  const b = $('#runEval'); b.disabled = true; const label = b.textContent;
+  const eng = $('#evalEngine').value;
+  b.textContent = eng === 'llm' ? 'Judging…' : 'Running…';
+  try {
+    const r = await fetch('/api/eval/run?engine=' + encodeURIComponent(eng), { method:'POST', headers: authHeader() });
+    if (r.status === 403) { $('#evalNote').textContent = 'Your role can’t run the evaluation (needs Risk Manager or Compliance Analyst). Showing the last stored result.'; }
+    else if (!r.ok) { throw new Error('HTTP ' + r.status); }
+    await loadEval();
+  } catch (err) { $('#evalNote').textContent = 'Evaluation failed: ' + err.message; }
+  finally { b.disabled = false; b.textContent = label; }
+};
+
+$('#refresh').onclick = loadEval;
+loadEval();
+</script>
+</body>
+</html>

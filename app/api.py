@@ -1056,6 +1056,15 @@ def dashboard_page() -> FileResponse:
     return FileResponse(index_path)
 
 
+@app.get("/quality")
+def quality_page() -> FileResponse:
+    """Serve the AI-quality (RAGAS-style evaluation) UI."""
+    index_path = BASE_DIR / "static" / "quality" / "index.html"
+    if not index_path.exists():
+        raise HTTPException(status_code=404, detail="AI Quality UI not available")
+    return FileResponse(index_path)
+
+
 @app.get("/chat")
 def chat_page() -> FileResponse:
     """Serve the supervisor copilot chat UI."""
