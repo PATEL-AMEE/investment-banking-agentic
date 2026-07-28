@@ -56,18 +56,6 @@
         <p class="cap" id="evalNote" style="margin-top:10px"></p>
       </div>
 
-      <div class="eyebrow">What these mean</div>
-      <div class="card">
-        <div class="defs">
-          <div class="d"><b>Faithfulness</b> — <span>how much of the answer is supported by the retrieved sources. Higher is better.</span></div>
-          <div class="d"><b>Hallucination</b> — <span>1 − faithfulness: the share of the answer not grounded in sources. Lower is better.</span></div>
-          <div class="d"><b>Answer relevancy</b> — <span>how directly the answer addresses the question.</span></div>
-          <div class="d"><b>Context precision</b> — <span>of the sources retrieved, how many were the expected ones.</span></div>
-          <div class="d"><b>Context recall</b> — <span>of the expected sources, how many were retrieved.</span></div>
-          <div class="d"><b>Engines</b> — <span><b>Lexical</b> is fast &amp; free (token overlap); <b>LLM judge</b> uses Azure OpenAI for entailment-based scoring.</span></div>
-        </div>
-      </div>
-
       <footer id="footer">Scored against <span class="idc">data/eval/golden_qa.json</span> · results stored in the shared graph store.</footer>
     </div>
   </main>
